@@ -1,0 +1,77 @@
+@extends('layouts.admin')
+
+@section('title', 'Đơn hàng #' . $order->id)
+
+@section('content')
+
+<div class="max-w-2xl">
+    <a href="{{ route('admin.orders.index') }}" class="text-sm text-gray-500 hover:text-gray-700 mb-4 inline-block">← Quay lại</a>
+
+    <div class="bg-white rounded-lg shadow p-6 space-y-5">
+
+        {{-- Header --}}
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-lg font-bold">Đơn hàng #{{ $order->id }}</h2>
+                <p class="text-sm text-gray-500">{{ $order->created_at->format('d/m/Y H:i') }}</p>
+            </div>
+            <form method="POST" action="{{ route('admin.orders.update', $order->id) }}" class="flex items-center gap-2">
+                @csrf @method('PUT')
+                <select name="status" class="border border-gray-300 rounded-lg px-2 py-1 text-sm">
+                    @foreach(['pending' => 'Chờ xác nhận', 'confirmed' => 'Đã xác nhận', 'shipping' => 'Đang giao', 'delivered' => 'Đã giao', 'cancelled' => 'Đã hủy'] as $val => $label)
+                    <option value="{{ $val }}" {{ $order->status === $val ? 'selected' : '' }}>{{ $label }}</option>
+                    @endforeach
+                </select>
+                <button type="submit" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-indigo-700 transition">
+                    Cập nhật
+                </button>
+            </form>
+        </div>
+
+        {{-- Customer info --}}
+        <div class="border-t pt-4 grid grid-cols-2 gap-3 text-sm">
+            <div><span class="text-gray-500">Khách hàng</span><p class="font-medium">{{ $order->user->name }}</p></div>
+            <div><span class="text-gray-500">Email</span><p>{{ $order->user->email }}</p></div>
+            <div><span class="text-gray-500">Người nhận</span><p class="font-medium">{{ $order->recipient_name }}</p></div>
+            <div><span class="text-gray-500">SĐT</span><p>{{ $order->phone }}</p></div>
+            <div class="col-span-2"><span class="text-gray-500">Địa chỉ</span><p>{{ $order->shipping_address }}</p></div>
+            @if($order->note)
+            <div class="col-span-2"><span class="text-gray-500">Ghi chú</span><p>{{ $order->note }}</p></div>
+            @endif
+        </div>
+
+        {{-- Items --}}
+        <div class="border-t pt-4">
+            <h3 class="font-medium mb-3">Sản phẩm</h3>
+            <div class="space-y-3">
+                @foreach($order->items as $item)
+                <div class="flex gap-3 text-sm">
+                    <div class="flex-1">
+                        <p class="font-medium">{{ $item->product_name }}</p>
+                        <p class="text-gray-500">{{ number_format($item->price) }}đ × {{ $item->quantity }}</p>
+                    </div>
+                    <span class="font-medium">{{ number_format($item->subtotal) }}đ</span>
+                </div>
+                @endforeach
+            </div>
+        </div>
+
+        {{-- Totals --}}
+        <div class="border-t pt-4 space-y-1 text-sm">
+            <div class="flex justify-between"><span class="text-gray-600">Tạm tính</span><span>{{ number_format($order->total_amount) }}đ</span></div>
+            @if($order->discount_amount > 0)
+            <div class="flex justify-between text-green-600"><span>Giảm giá</span><span>-{{ number_format($order->discount_amount) }}đ</span></div>
+            @endif
+            <div class="flex justify-between font-bold text-base border-t pt-2">
+                <span>Tổng cộng</span>
+                <span class="text-indigo-600">{{ number_format($order->final_amount) }}đ</span>
+            </div>
+            <div class="flex justify-between text-gray-500">
+                <span>Thanh toán</span>
+                <span>{{ $order->payment_method === 'cod' ? 'COD' : 'VNPay' }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@endsection
