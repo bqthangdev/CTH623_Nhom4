@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\UpdateOrderStatusRequest;
 use App\Models\Order;
 use App\Repositories\OrderRepository;
 use Illuminate\Http\RedirectResponse;
@@ -31,13 +32,9 @@ class OrderController extends Controller
         return view('admin.orders.show', compact('order'));
     }
 
-    public function update(Request $request, Order $order): RedirectResponse
+    public function update(UpdateOrderStatusRequest $request, Order $order): RedirectResponse
     {
-        $request->validate([
-            'status' => ['required', 'in:pending,confirmed,shipping,delivered,cancelled'],
-        ]);
-
-        $order->update(['status' => $request->status]);
+        $order->update(['status' => $request->validated('status')]);
 
         return back()->with('success', 'Cập nhật trạng thái đơn hàng thành công!');
     }

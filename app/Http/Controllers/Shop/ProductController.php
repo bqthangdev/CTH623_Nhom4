@@ -3,13 +3,11 @@
 namespace App\Http\Controllers\Shop;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Shop\StoreReviewRequest;
 use App\Models\Category;
 use App\Models\Product;
 use App\Repositories\ProductRepository;
 use App\Services\ProductService;
 use App\Services\RecommendationService;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -29,13 +27,13 @@ class ProductController extends Controller
         return view('shop.products.index', compact('products', 'categories'));
     }
 
-    public function show(Product $product): View
+    public function show(Request $request, Product $product): View
     {
         abort_if(! $product->status, 404);
 
         $product->load(['images', 'category', 'attributes', 'reviews.user']);
 
-        $this->productService->recordView($product, auth()->id());
+        $this->productService->recordView($product, $request->user()?->getAuthIdentifier());
 
         $recommendations = $this->recommendationService->getForProduct($product);
 

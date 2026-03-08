@@ -1,0 +1,26 @@
+parameters:
+    level: 6
+    paths:
+        - app
+        - tests
+    excludePaths:
+        - vendor
+    ignoreErrors:
+        # Laravel's auth() helper returns AuthManager which uses __call() magic.
+        # PHPStan cannot statically resolve ->check(), ->user(), ->id() without
+        # larastan stubs. These are valid runtime calls — larastan does not yet
+        # support Laravel 12, so we suppress these specific false positives.
+        -
+            message: '#Undefined method ''check''#'
+            path: app/Http/Controllers/*
+        -
+            message: '#Undefined method ''user''#'
+            path: app/Http/Controllers/*
+        -
+            message: '#Undefined method ''id''#'
+            path: app/Http/Controllers/*
+        # Laravel Factory::create() returns Model|Collection at PHPStan level
+        # but tests use ->create() knowing it returns a single Model.
+        -
+            message: '#Parameter \#1 \$user of method .+::actingAs\(\) expects .+, .+Collection.+\|.+Model.+ given#'
+            path: tests/*

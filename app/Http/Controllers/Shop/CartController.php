@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Shop;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Shop\AddToCartRequest;
+use App\Http\Requests\Shop\UpdateCartItemRequest;
 use App\Models\CartItem;
 use App\Models\Product;
 use App\Services\CartService;
@@ -16,50 +18,49 @@ class CartController extends Controller
         private readonly CartService $cartService,
     ) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
-        $cartItems = $this->cartService->getItems(auth()->user());
-        $total     = $this->cartService->getTotal(auth()->user());
+        /** @var \App\Models\User $user */
+        $user      = $request->user();
+        $cartItems = $this->cartService->getItems($user);
+        $total     = $this->cartService->getTotal($user);
 
         return view('shop.cart.index', compact('cartItems', 'total'));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(AddToCartRequest $request): RedirectResponse
     {
-        $request->validate([
-            'product_id' => ['required', 'exists:products,id'],
-            'quantity'   => ['required', 'integer', 'min:1', 'max:100'],
-        ]);
+        /** @var \App\Models\User $user */
+        $user    = $request->user();
+        $product = Product::findOrFail($request->validated('product_id'));
 
-        $product = Product::findOrFail($request->product_id);
-
-        if ($product->stock < $request->quantity) {
+        if ($product->stock < $request->validated('quantity')) {
             return back()->with('error', 'Sản phẩm không đủ số lượng trong kho.');
         }
 
-        $this->cartService->addItem(auth()->user(), $request->product_id, $request->quantity);
+        $this->cartService->addItem($user, $product->id, $request->validated('quantity'));
 
         return back()->with('success', 'Đã thêm vào giỏ hàng!');
     }
 
-    public function update(Request $request, CartItem $cartItem): RedirectResponse
+    public function update(UpdateCartItemRequest $request, CartItem $cartItem): RedirectResponse
     {
-        abort_unless($cartItem->user_id === auth()->id(), 403);
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+        abort_unless($cartItem->user_id === $user->id, 403);
 
-        $request->validate([
-            'quantity' => ['required', 'integer', 'min:1', 'max:100'],
-        ]);
-
-        $this->cartService->updateQuantity(auth()->user(), $cartItem->id, $request->quantity);
+        $this->cartService->updateQuantity($user, $cartItem->id, $request->validated('quantity'));
 
         return back()->with('success', 'Đã cập nhật giỏ hàng.');
     }
 
-    public function destroy(CartItem $cartItem): RedirectResponse
+    public function destroy(Request $request, CartItem $cartItem): RedirectResponse
     {
-        abort_unless($cartItem->user_id === auth()->id(), 403);
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+        abort_unless($cartItem->user_id === $user->id, 403);
 
-        $this->cartService->removeItem(auth()->user(), $cartItem->id);
+        $this->cartService->removeItem($user, $cartItem->id);
 
         return back()->with('success', 'Đã xóa sản phẩm khỏi giỏ hàng.');
     }

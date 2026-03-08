@@ -5,13 +5,15 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreCategoryRequest;
 use App\Models\Category;
+use App\Services\CategoryService;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class CategoryController extends Controller
 {
+    public function __construct(
+        private readonly CategoryService $categoryService,
+    ) {}
     public function index(): View
     {
         $categories = Category::with('parent')
@@ -31,14 +33,11 @@ class CategoryController extends Controller
 
     public function store(StoreCategoryRequest $request): RedirectResponse
     {
-        $data         = $request->validated();
-        $data['slug'] = Str::slug($data['name']);
+        $imagePath = $request->hasFile('image')
+            ? $request->file('image')->store('categories', 'public')
+            : null;
 
-        if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('categories', 'public');
-        }
-
-        Category::create($data);
+        $this->categoryService->create($request->validated(), $imagePath);
 
         return redirect()->route('admin.categories.index')
             ->with('success', 'Tạo danh mục thành công!');
@@ -57,14 +56,11 @@ class CategoryController extends Controller
 
     public function update(StoreCategoryRequest $request, Category $category): RedirectResponse
     {
-        $data         = $request->validated();
-        $data['slug'] = Str::slug($data['name']);
+        $imagePath = $request->hasFile('image')
+            ? $request->file('image')->store('categories', 'public')
+            : null;
 
-        if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('categories', 'public');
-        }
-
-        $category->update($data);
+        $this->categoryService->update($category, $request->validated(), $imagePath);
 
         return redirect()->route('admin.categories.index')
             ->with('success', 'Cập nhật danh mục thành công!');
@@ -76,7 +72,7 @@ class CategoryController extends Controller
             return back()->with('error', 'Không thể xóa danh mục đang có sản phẩm.');
         }
 
-        $category->delete();
+        $this->categoryService->delete($category);
 
         return redirect()->route('admin.categories.index')
             ->with('success', 'Đã xóa danh mục.');

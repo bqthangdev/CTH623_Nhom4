@@ -3,9 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreVoucherRequest;
+use App\Http\Requests\Admin\UpdateVoucherRequest;
 use App\Models\Voucher;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class VoucherController extends Controller
@@ -22,19 +23,9 @@ class VoucherController extends Controller
         return view('admin.vouchers.create');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreVoucherRequest $request): RedirectResponse
     {
-        $data = $request->validate([
-            'code'      => ['required', 'string', 'max:50', 'unique:vouchers,code'],
-            'type'      => ['required', 'in:fixed,percent'],
-            'value'     => ['required', 'numeric', 'min:0'],
-            'min_order' => ['nullable', 'numeric', 'min:0'],
-            'max_uses'  => ['nullable', 'integer', 'min:1'],
-            'expires_at'=> ['nullable', 'date', 'after:today'],
-            'is_active' => ['boolean'],
-        ]);
-
-        Voucher::create($data);
+        Voucher::create($request->validated());
 
         return redirect()->route('admin.vouchers.index')
             ->with('success', 'Tạo voucher thành công!');
@@ -45,19 +36,9 @@ class VoucherController extends Controller
         return view('admin.vouchers.edit', compact('voucher'));
     }
 
-    public function update(Request $request, Voucher $voucher): RedirectResponse
+    public function update(UpdateVoucherRequest $request, Voucher $voucher): RedirectResponse
     {
-        $data = $request->validate([
-            'code'      => ['required', 'string', 'max:50', 'unique:vouchers,code,' . $voucher->id],
-            'type'      => ['required', 'in:fixed,percent'],
-            'value'     => ['required', 'numeric', 'min:0'],
-            'min_order' => ['nullable', 'numeric', 'min:0'],
-            'max_uses'  => ['nullable', 'integer', 'min:1'],
-            'expires_at'=> ['nullable', 'date'],
-            'is_active' => ['boolean'],
-        ]);
-
-        $voucher->update($data);
+        $voucher->update($request->validated());
 
         return redirect()->route('admin.vouchers.index')
             ->with('success', 'Cập nhật voucher thành công!');

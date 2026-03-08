@@ -14,7 +14,7 @@ SmartShop là nền tảng thương mại điện tử tích hợp AI xây dựn
 - Gợi ý sản phẩm liên quan được cá nhân hóa bởi AI
 - Giỏ hàng, danh sách yêu thích
 - Thanh toán với mã giảm giá, chọn phương thức COD / VNPay
-- Quản lý đơn hàng, đánh giá sản phẩm
+- Xem lịch sử đơn hàng, hủy đơn hàng, đánh giá sản phẩm
 - Xác thực người dùng (đăng ký, đăng nhập, cập nhật hồ sơ)
 
 ### Phân hệ Quản trị (`/admin`)
@@ -37,7 +37,7 @@ SmartShop là nền tảng thương mại điện tử tích hợp AI xây dựn
 | Auth | Laravel Breeze (session) + Sanctum (API) |
 | Queue | Laravel Queue (database driver) |
 | AI Service | Python 3.11 + FastAPI (port 8001) |
-| Real-time | Livewire 3 |
+| Real-time | Livewire 4 |
 
 ---
 
@@ -49,17 +49,19 @@ smartshop/
 │   ├── Http/
 │   │   ├── Controllers/
 │   │   │   ├── Admin/          # Controllers phân hệ quản trị
-│   │   │   ├── Api/            # API Controllers (cart, order, visual search)
+│   │   │   ├── Api/            # API Controllers (cart, order, visual search, recommendations)
 │   │   │   ├── Auth/           # Xác thực (Breeze)
 │   │   │   └── Shop/           # Controllers phân hệ khách hàng
 │   │   ├── Middleware/
 │   │   └── Requests/
 │   │       ├── Admin/          # Form Requests cho admin
+│   │       ├── Api/            # Form Requests cho API
 │   │       └── Shop/           # Form Requests cho shop
 │   ├── Models/                 # 14 Eloquent models
 │   ├── Repositories/           # ProductRepository, OrderRepository
-│   ├── Services/               # CartService, OrderService, ProductService,
-│   │                           # RecommendationService, VisualSearchService
+│   ├── Services/               # CartService, CategoryService, DashboardService,
+│   │                           # OrderService, ProductService, RecommendationService,
+│   │                           # ReviewService, VisualSearchService, WishlistService
 │   └── View/                   # View Composers
 ├── ai-service/                 # Microservice Python FastAPI
 │   ├── main.py
@@ -67,22 +69,30 @@ smartshop/
 │   └── routers/                # visual_search, recommendations
 ├── database/
 │   ├── factories/              # Model factories
-│   ├── migrations/             # 7 migration files, 14 tables
-│   └── seeders/                # UserSeeder, CategorySeeder, ProductSeeder, VoucherSeeder
+│   ├── migrations/             # 7 migration files, 14 bảng ứng dụng
+│   └── seeders/                # UserSeeder, CategorySeeder, ProductSeeder, BannerSeeder
 ├── docs/
 │   ├── CODING_STANDARDS.md
 │   ├── TESTING_GUIDELINES.md
 │   └── HUONG_DAN_KHOI_CHAY.md # Hướng dẫn khởi chạy dự án
 ├── resources/
 │   └── views/
-│       ├── admin/              # ~20 Blade views cho admin
+│       ├── admin/              # 20 Blade views cho admin
 │       ├── auth/               # Views xác thực
 │       ├── components/         # Shared Blade components
 │       ├── layouts/            # app.blade.php, admin.blade.php
-│       └── shop/               # ~9 Blade views cho shop
-└── routes/
-    ├── web.php                 # Web routes (shop + admin)
-    └── api.php                 # API routes (v1/cart, v1/orders, v1/visual-search)
+│       └── shop/               # 9 Blade views cho shop
+├── routes/
+│   ├── web.php                 # Web routes (shop + admin)
+│   └── api.php                 # API routes (/api/cart, /api/orders, /api/visual-search, /api/products/{id}/recommendations)
+└── tests/
+    ├── Feature/
+    │   ├── Admin/              # AuthorizationTest, ProductManagementTest
+    │   ├── Auth/               # Authentication, Registration, Password tests
+    │   └── Shop/               # CartTest, CheckoutTest, VisualSearchTest
+    └── Unit/
+        ├── Models/             # ProductTest
+        └── Services/           # CartServiceTest, RecommendationServiceTest
 ```
 
 ---

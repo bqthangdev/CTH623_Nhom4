@@ -5,27 +5,31 @@ namespace App\Http\Controllers\Shop;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Shop\StoreReviewRequest;
 use App\Models\Product;
-use App\Models\Review;
+use App\Services\ReviewService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Validation\ValidationException;
 
 class ReviewController extends Controller
 {
+    public function __construct(
+        private readonly ReviewService $reviewService,
+    ) {}
+
     public function store(StoreReviewRequest $request, Product $product): RedirectResponse
     {
-        $alreadyReviewed = Review::where('user_id', auth()->id())
-            ->where('product_id', $product->id)
-            ->exists();
+        /** @var \App\Models\User $user */
+        $user = $request->user();
 
-        if ($alreadyReviewed) {
-            return back()->with('error', 'Bạn đã đánh giá sản phẩm này rồi.');
+        try {
+            $this->reviewService->store(
+                $user->id,
+                $product,
+                $request->validated('rating'),
+                $request->validated('comment'),
+            );
+        } catch (ValidationException $e) {
+            return back()->with('error', $e->getMessage());
         }
-
-        Review::create([
-            'user_id'    => auth()->id(),
-            'product_id' => $product->id,
-            'rating'     => $request->validated('rating'),
-            'comment'    => $request->validated('comment'),
-        ]);
 
         return back()->with('success', 'Cảm ơn bạn đã đánh giá sản phẩm!');
     }

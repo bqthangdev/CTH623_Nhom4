@@ -3,9 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreBannerRequest;
+use App\Http\Requests\Admin\UpdateBannerRequest;
 use App\Models\Banner;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
@@ -23,16 +24,9 @@ class BannerController extends Controller
         return view('admin.banners.create');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreBannerRequest $request): RedirectResponse
     {
-        $data = $request->validate([
-            'title'      => ['required', 'string', 'max:255'],
-            'image'      => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
-            'link'       => ['nullable', 'url', 'max:500'],
-            'sort_order' => ['nullable', 'integer', 'min:0'],
-            'is_active'  => ['boolean'],
-        ]);
-
+        $data          = $request->validated();
         $data['image'] = $request->file('image')->store('banners', 'public');
 
         Banner::create($data);
@@ -46,15 +40,9 @@ class BannerController extends Controller
         return view('admin.banners.edit', compact('banner'));
     }
 
-    public function update(Request $request, Banner $banner): RedirectResponse
+    public function update(UpdateBannerRequest $request, Banner $banner): RedirectResponse
     {
-        $data = $request->validate([
-            'title'      => ['required', 'string', 'max:255'],
-            'image'      => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
-            'link'       => ['nullable', 'url', 'max:500'],
-            'sort_order' => ['nullable', 'integer', 'min:0'],
-            'is_active'  => ['boolean'],
-        ]);
+        $data = $request->validated();
 
         if ($request->hasFile('image')) {
             Storage::disk('public')->delete($banner->image);
