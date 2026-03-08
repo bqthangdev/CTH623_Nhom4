@@ -40,4 +40,19 @@
     </div>
 </section>
 
+{{-- Personalized recommendations (logged-in users with purchase history) --}}
+@auth
+@if($personalizedProducts->isNotEmpty())
+<section class="mt-10">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6">Gợi ý cho bạn</h2>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+        @foreach($personalizedProducts as $product)
+        <x-product-card :product="$product" />
+        @endforeach
+    </div>
+</section>
+@endif
+@endauth
+
 @endsection

@@ -12,7 +12,7 @@ class RecommendationController extends Controller
 {
     public function __construct(private readonly RecommendationService $recommendationService) {}
 
-    public function forProduct(Request $request, Product $product): JsonResponse
+    public function index(Request $request, Product $product): JsonResponse
     {
         $limit    = (int) $request->get('limit', 8);
         $products = $this->recommendationService->getForProduct($product, min($limit, 20));

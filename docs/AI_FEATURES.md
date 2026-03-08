@@ -28,7 +28,9 @@ Laravel App (port 8000)
         ▼
 AI Service – FastAPI (port 8001)
    ├── POST /api/visual-search
-   └── GET  /api/recommendations
+   ├── POST /api/embeddings/generate
+   ├── GET  /api/recommendations/similar
+   └── GET  /api/recommendations/personal
 ```
 
 ### Các file liên quan
@@ -44,6 +46,7 @@ AI Service – FastAPI (port 8001)
 | API Controller – Recommendations | `app/Http/Controllers/Api/RecommendationController.php` |
 | Shop Controller – Visual Search | `app/Http/Controllers/Shop/VisualSearchController.php` |
 | Shop Controller – Products (gọi gợi ý) | `app/Http/Controllers/Shop/ProductController.php` |
+| Artisan command – sinh embeddings | `app/Console/Commands/GenerateProductEmbeddings.php` |
 
 ---
 
@@ -85,7 +88,7 @@ Người dùng upload ảnh
 | `POST` | `/visual-search` | Xử lý ảnh, trả về kết quả (Web form) |
 | `POST` | `/api/v1/visual-search` | Endpoint JSON cho AJAX (yêu cầu auth, throttle 10/min) |
 
-### AI Service endpoint
+### AI Service endpoints
 
 **`POST /api/visual-search`** — nhận `multipart/form-data` với field `image`.
 
@@ -93,18 +96,41 @@ Người dùng upload ảnh
 // Response
 {
     "products": [
-        { "id": 5,  "similarity_score": 1.00 },
-        { "id": 12, "similarity_score": 0.93 },
-        { "id": 3,  "similarity_score": 0.86 }
+        { "id": 5,  "similarity_score": 0.9821 },
+        { "id": 12, "similarity_score": 0.9643 },
+        { "id": 3,  "similarity_score": 0.9105 }
     ]
 }
 ```
 
 Danh sách trả về tối đa **10 sản phẩm**, sắp xếp theo `similarity_score` giảm dần.
+Nếu chưa có embedding nào trong DB, trả về danh sách rỗng và Laravel fallback về
+sản phẩm nổi bật.
 
-**Cài đặt demo hiện tại:** tính MD5 hash của nội dung ảnh → dùng làm seed ngẫu nhiên
-→ shuffle danh sách product ID → lấy top 10. Kết quả mang tính deterministic (cùng
-ảnh luôn ra cùng kết quả) nhưng không dựa trên nội dung thực của ảnh.
+**`POST /api/embeddings/generate?product_id={id}`** — nhận `multipart/form-data` với
+field `image`. Tính embedding cho ảnh sản phẩm và lưu vào DB, sau đó cập nhật
+cache in-memory. Được gọi bởi `php artisan embeddings:generate`.
+
+### Thuật toán embedding
+
+Vector đặc trưng là **color histogram chuẩn hoá L2** (192 chiều):
+- Ảnh được resize về 224×224 pixel và chuyển sang RGB.
+- Tính histogram 64 bins cho mỗi trong 3 kênh màu (R, G, B).
+- Ghép 3 histogram thành vector 192 chiều, chuẩn hoá theo L2-norm.
+
+Độ tương đồng giữa ảnh truy vấn và từng sản phẩm được tính bằng **cosine similarity**
+trên ma trận embedding đã load vào bộ nhớ lúc khởi động.
+
+### Sinh embeddings cho sản phẩm
+
+Sau khi chạy `php artisan migrate --seed` và khởi động AI Service, chạy:
+
+```bash
+php artisan embeddings:generate
+```
+
+Lệnh này đọc ảnh đầu tiên của từng sản phẩm từ storage, gọi endpoint
+`/api/embeddings/generate`, và lưu kết quả vào bảng `product_embeddings`.
 
 ### Fallback
 
@@ -118,10 +144,14 @@ vẫn nhìn thấy danh sách sản phẩm, không báo lỗi.
 
 ### Mô tả
 
-Hiển thị danh sách sản phẩm gợi ý ở trang chi tiết sản phẩm. Gợi ý được cá nhân hoá
-theo `user_id` nếu người dùng đã đăng nhập.
+Có hai chế độ gợi ý riêng biệt:
 
-### Luồng xử lý
+| Vị trí | Chế độ | AI endpoint |
+|---|---|---|
+| Trang chi tiết sản phẩm | Sản phẩm tương tự | `GET /api/recommendations/similar` |
+| Trang chủ (người dùng đã đăng nhập) | Cá nhân hoá theo lịch sử mua | `GET /api/recommendations/personal` |
+
+### Luồng xử lý — Sản phẩm tương tự (trang chi tiết)
 
 ```
 Người dùng xem trang sản phẩm
@@ -131,70 +161,100 @@ Người dùng xem trang sản phẩm
  Shop\ProductController@show
  ├── Load product (images, category, attributes, reviews)
  ├── Ghi nhận lượt xem: ProductService::recordView()
- └── Gọi RecommendationService::getForProduct(product, userId)
+ └── Gọi RecommendationService::getForProduct(product, limit)
              │
              ├─ [Thành công]
-             │   GET http://ai-service/api/recommendations
-             │       ?product_id=X&user_id=Y&limit=8
+             │   GET /api/recommendations/similar?product_id=X&limit=8
              │   ← { recommended_products: [{id, score}, ...] }
-             │   Lấy danh sách ID (giữ đúng thứ tự AI)
-             │   → ProductRepository::getByIds()
+             │   → ProductRepository::getByIds() (giữ thứ tự AI)
              │   └── Trả về view shop.products.show với $recommendations
              │
              └─ [Thất bại / timeout]
                  Log warning
-                 Fallback: ProductRepository::getSameCategoryExcept(
-                               category_id, product_id, limit)
-                 └── Trả về view shop.products.show với $recommendations
+                 Fallback: ProductRepository::getSameCategoryExcept()
 ```
+
+### Luồng xử lý — Cá nhân hoá (trang chủ)
+
+```
+Người dùng đã đăng nhập truy cập trang chủ
+        │
+        ▼
+[Web] GET /
+ Shop\HomeController@index
+ ├── Banner::active(), ProductRepository::getFeatured(8)
+ └── RecommendationService::getPersonalized(userId, 8)
+             │
+             ├─ [Thành công]
+             │   GET /api/recommendations/personal?user_id=Y&limit=8
+             │   ← { recommended_products: [{id, score}, ...] }
+             │   → ProductRepository::getByIds() (giữ thứ tự AI)
+             │   └── Trả về view shop.home với $personalizedProducts
+             │
+             └─ [Thất bại / không có lịch sử]
+                 Log warning / trả về danh sách rỗng
+                 Fallback: ProductRepository::getFeatured()
+                 └── Mục "Gợi ý cho bạn" ẩn nếu danh sách rỗng
+```
+
+> Người dùng chưa đăng nhập: `$personalizedProducts` là `collect()` rỗng, mục
+> "Gợi ý cho bạn" không hiển thị trên trang chủ.
 
 ### Routes
 
 | Method | URI | Mục đích |
 |---|---|---|
-| `GET` | `/api/v1/products/{product}/recommendations` | Endpoint JSON (public, throttle 60/min) |
+| `GET` | `/api/products/{product}/recommendations` | Endpoint JSON — sản phẩm tương tự |
 
-> Chức năng gợi ý trên trang sản phẩm không có route riêng — dữ liệu được nhúng trực
-> tiếp vào trang khi render server-side qua `ProductController@show`.
+### AI Service endpoints
 
-### AI Service endpoint
-
-**`GET /api/recommendations`** — query params:
+**`GET /api/recommendations/similar`** — query params:
 
 | Param | Kiểu | Bắt buộc | Mô tả |
 |---|---|---|---|
-| `product_id` | `int` | Có | ID của sản phẩm đang xem |
-| `user_id` | `int` | Không | ID người dùng để cá nhân hoá |
-| `limit` | `int` | Không (mặc định 8) | Số lượng gợi ý tối đa |
+| `product_id` | `int` | Có | ID sản phẩm cần tìm tương tự |
+| `limit` | `int` | Không (mặc định 8) | Số lượng kết quả |
+
+**`GET /api/recommendations/personal`** — query params:
+
+| Param | Kiểu | Bắt buộc | Mô tả |
+|---|---|---|---|
+| `user_id` | `int` | Có | ID người dùng |
+| `limit` | `int` | Không (mặc định 8) | Số lượng kết quả |
 
 ```json
-// Response
+// Response (cả hai endpoint)
 {
     "recommended_products": [
-        { "id": 7,  "score": 0.95 },
-        { "id": 2,  "score": 0.90 },
-        { "id": 14, "score": 0.85 }
+        { "id": 7,  "score": 0.9821 },
+        { "id": 2,  "score": 0.9530 },
+        { "id": 14, "score": 0.9104 }
     ]
 }
 ```
 
-**Lưu ý quan trọng:** Laravel giữ nguyên **thứ tự** mà AI Service trả về khi map sang
-Eloquent Collection (không dùng `whereIn` thông thường vì SQL không đảm bảo thứ tự).
+### Thuật toán
+
+**Similar products:** cosine similarity giữa embedding của `product_id` và tất cả sản
+phẩm còn lại trong cache in-memory.
+
+**Personalized:** truy vấn `order_items` để lấy danh sách sản phẩm đã mua → tính
+vector trung bình (taste profile) → cosine similarity với tất cả sản phẩm chưa mua
+→ top-K.
+
+**Lưu ý:** Laravel giữ nguyên thứ tự mà AI trả về khi map sang Eloquent Collection:
 
 ```php
-// RecommendationService::fetchFromAiService()
+// RecommendationService::fetchOrdered()
 $products = $this->productRepository->getByIds($ids)->keyBy('id');
 return collect($ids)->map(fn ($id) => $products[$id] ?? null)->filter()->values();
 ```
 
-**Cài đặt demo hiện tại:** dùng `product_id` làm seed ngẫu nhiên → shuffle pool (loại
-trừ chính sản phẩm hiện tại) → lấy top-K. Mỗi sản phẩm luôn có cùng danh sách gợi ý,
-không phụ thuộc vào `user_id`.
-
 ### Fallback
 
-Khi AI Service lỗi, `RecommendationService` ghi log warning và gọi
-`ProductRepository::getSameCategoryExcept()` để lấy các sản phẩm cùng danh mục.
+- **Similar products:** fallback về `getSameCategoryExcept()` (cùng danh mục, random).
+- **Personalized:** fallback về `getFeatured()` (sản phẩm nổi bật). Nếu AI không có
+  embedding nào trong cache, trả về danh sách rỗng → Laravel fallback tự động.
 
 ---
 
@@ -219,42 +279,29 @@ Cấu hình trong `config/services.php`, đọc từ `.env`:
 
 ---
 
-## 5. Nâng cấp lên Production
+## 5. Nâng cấp độ chính xác
 
-Phần này mô tả những gì cần thay thế trong AI Service để chuyển từ demo sang production.
+Phần này mô tả những cải tiến có thể thực hiện để nâng cao chất lượng tìm kiếm.
 
 ### Visual Search
 
-Thay phần shuffle demo bằng pipeline embedding thực:
+Color histogram hoạt động tốt với sự tương đồng về màu sắc, nhưng bỏ qua hình dạng
+và ngữ nghĩa. Để cải thiện:
 
-1. **Lúc khởi động** (`startup_event`): load model CLIP hoặc ResNet một lần, đọc toàn bộ
-   embeddings từ bảng `product_embeddings` vào memory.
-2. **Khi nhận request**: trích xuất embedding của ảnh upload, tính cosine similarity với
-   tất cả product embeddings, trả về top-K.
+- **Deep feature extractor:** thay `_extract_embedding()` bằng MobileNetV2 hoặc
+  EfficientNet từ `torchvision`. Vector đặc trưng từ penultimate layer (~1280 chiều)
+  nắm bắt được hình dạng và ngữ nghĩa sản phẩm.
+- **CLIP embeddings:** dùng `open-clip-torch` để có embedding đa phương thức
+  (ảnh + văn bản), hữu ích khi muốn tìm kiếm bằng cả ảnh lẫn từ khoá.
 
-```python
-# Ví dụ cấu trúc production (ai-service/routers/visual_search.py)
-@router.on_event("startup")
-async def load_model():
-    app.state.model = load_clip_model()
-    app.state.embeddings = load_product_embeddings_from_db()
-
-@router.post("/visual-search")
-async def visual_search(image: UploadFile = File(...)):
-    embedding = extract_embedding(app.state.model, await image.read())
-    scores = cosine_similarity(embedding, app.state.embeddings)
-    top_k = get_top_k(scores, k=10)
-    return {"products": top_k}
-```
+Kiến trúc tổng thể (startup, cosine similarity, fallback) **không cần thay đổi** —
+chỉ cần thay hàm `_extract_embedding()` trong `visual_search.py`.
 
 ### Recommendations
 
-Thay phần shuffle demo bằng một trong hai phương pháp:
+Thay phần shuffle demo bằng một trong hai phương pháp nâng cao hơn:
 
-- **Embedding similarity:** tính cosine similarity giữa embedding của `product_id` với
-  các sản phẩm còn lại trong bảng `product_embeddings`.
-- **Collaborative filtering:** phân tích bảng `order_items` để tìm "người mua X cũng
-  mua Y", kết hợp `user_id` để cá nhân hoá.
-
-Bảng `product_embeddings` (đã có trong schema) lưu vector đặc trưng cho mỗi sản phẩm,
-sẵn sàng cho cả hai phương pháp trên.
+- **Embedding similarity:** đã triển khai. Có thể nâng độ chính xác bằng cách dùng
+  deep feature extractor (MobileNetV2, CLIP) thay color histogram — xem mục Visual Search.
+- **Collaborative filtering chuyên sâu:** dùng matrix factorization (SVD, ALS) trên
+  toàn bộ `order_items` để nắm bắt pattern "người mua X cũng mua Y" ở quy mô lớn hơn.

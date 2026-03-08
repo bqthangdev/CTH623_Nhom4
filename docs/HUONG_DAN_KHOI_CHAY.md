@@ -141,6 +141,26 @@ uvicorn main:app --reload --port 8001
 AI Service sẽ chạy tại **http://localhost:8001**.
 
 > **Gợi ý:** Nên dùng virtual environment Python:
+
+---
+
+## Bước 10 — Sinh embeddings cho sản phẩm
+
+Sau khi AI Service đang chạy, quay lại terminal Laravel và chạy:
+
+```bash
+php artisan embeddings:generate
+```
+
+Lệnh này đọc ảnh của từng sản phẩm, gọi AI Service để tính embedding màu sắc, và lưu
+vào bảng `product_embeddings`. Chức năng **tìm kiếm bằng hình ảnh** sẽ trả về kết quả
+dựa trên nội dung thực của ảnh sau bước này.
+
+> Chạy lại lệnh bất cứ lúc nào thêm sản phẩm mới hoặc cập nhật ảnh sản phẩm.
+
+---
+
+> **Gợi ý:** Nên dùng virtual environment Python:
 > ```bash
 > python -m venv .venv
 > .venv\Scripts\activate    # Windows

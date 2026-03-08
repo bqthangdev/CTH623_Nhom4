@@ -37,10 +37,7 @@ class ProductController extends Controller
 
         $this->productService->recordView($product, auth()->id());
 
-        $recommendations = $this->recommendationService->getForProduct(
-            $product,
-            userId: auth()->id() ?? 0
-        );
+        $recommendations = $this->recommendationService->getForProduct($product);
 
         return view('shop.products.show', compact('product', 'recommendations'));
     }

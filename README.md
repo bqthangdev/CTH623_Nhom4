@@ -110,6 +110,9 @@ php artisan serve
 cd ai-service
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8001
+
+# 6. Sinh embeddings sản phẩm (chạy một lần sau khi seed)
+php artisan embeddings:generate
 ```
 
 ### Tài khoản mặc định

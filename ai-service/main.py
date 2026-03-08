@@ -1,8 +1,22 @@
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import visual_search, recommendations
+from routers import recommendations, visual_search
 
-app = FastAPI(title="SmartShop AI Service", version="1.0.0")
+# Load the Laravel .env from the project root (one level above ai-service/)
+load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    visual_search.load_embeddings()
+    yield
+
+
+app = FastAPI(title="SmartShop AI Service", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

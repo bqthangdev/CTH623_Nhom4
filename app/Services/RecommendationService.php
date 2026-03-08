@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Product;
-use App\Models\UserActivity;
 use App\Repositories\ProductRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Http;
@@ -15,12 +14,18 @@ class RecommendationService
         private readonly ProductRepository $productRepository,
     ) {}
 
-    public function getForProduct(Product $product, int $userId = 0, int $limit = 8): Collection
+    /**
+     * Products visually similar to a given product (for product detail page).
+     */
+    public function getForProduct(Product $product, int $limit = 8): Collection
     {
         try {
-            return $this->fetchFromAiService($product->id, $userId, $limit);
+            return $this->fetchOrdered('/api/recommendations/similar', [
+                'product_id' => $product->id,
+                'limit'      => $limit,
+            ]);
         } catch (\Exception $e) {
-            Log::warning('AI recommendation failed, using fallback.', [
+            Log::warning('AI similar-products failed, using fallback.', [
                 'product_id' => $product->id,
                 'error'      => $e->getMessage(),
             ]);
@@ -29,14 +34,33 @@ class RecommendationService
         }
     }
 
-    private function fetchFromAiService(int $productId, int $userId, int $limit): Collection
+    /**
+     * Products personalised to a user's purchase history (for home page).
+     */
+    public function getPersonalized(int $userId, int $limit = 8): Collection
+    {
+        try {
+            return $this->fetchOrdered('/api/recommendations/personal', [
+                'user_id' => $userId,
+                'limit'   => $limit,
+            ]);
+        } catch (\Exception $e) {
+            Log::warning('AI personalized recommendations failed, using fallback.', [
+                'user_id' => $userId,
+                'error'   => $e->getMessage(),
+            ]);
+
+            return $this->productRepository->getFeatured($limit);
+        }
+    }
+
+    /**
+     * Call an AI recommendation endpoint and return products in AI-ranked order.
+     */
+    private function fetchOrdered(string $path, array $params): Collection
     {
         $response = Http::timeout(config('services.ai.timeout', 10))
-            ->get(config('services.ai.url') . '/api/recommendations', [
-                'product_id' => $productId,
-                'user_id'    => $userId ?: null,
-                'limit'      => $limit,
-            ]);
+            ->get(config('services.ai.url') . $path, $params);
 
         if ($response->failed()) {
             throw new \RuntimeException('AI service returned error: ' . $response->status());
@@ -45,11 +69,12 @@ class RecommendationService
         $ids = collect($response->json('recommended_products', []))->pluck('id')->filter()->all();
 
         if (empty($ids)) {
-            throw new \RuntimeException('AI service returned empty recommendations.');
+            throw new \RuntimeException('AI service returned empty list.');
         }
 
-        // Giữ nguyên thứ tự mà AI trả về
+        // Preserve the ranking order returned by the AI service
         $products = $this->productRepository->getByIds($ids)->keyBy('id');
+
         return collect($ids)->map(fn ($id) => $products[$id] ?? null)->filter()->values();
     }
 }
