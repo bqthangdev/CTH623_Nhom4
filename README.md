@@ -147,4 +147,5 @@ uvicorn main:app --reload --port 8001
 
 - [Quy tắc lập trình](docs/CODING_STANDARDS.md)
 - [Hướng dẫn kiểm thử](docs/TESTING_GUIDELINES.md)
+- [Tài liệu Chức năng AI](docs/AI_FEATURES.md)
 - [Hướng dẫn khởi chạy](docs/HUONG_DAN_KHOI_CHAY.md)
