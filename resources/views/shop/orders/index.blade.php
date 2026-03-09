@@ -34,15 +34,19 @@
 
         <div class="flex items-center justify-between">
             <span class="font-bold text-indigo-600">{{ number_format($order->final_amount) }}đ</span>
-            <div class="flex gap-2">
+            <div class="flex items-center gap-2">
                 <a href="{{ route('shop.orders.show', $order->id) }}"
-                    class="text-sm text-indigo-600 hover:underline">Chi tiết</a>
+                   class="text-sm px-3 py-1.5 rounded-lg border border-indigo-600 text-indigo-600 hover:bg-indigo-50 transition">
+                    Chi tiết
+                </a>
                 @if(in_array($order->status, ['pending', 'confirmed']))
                 <form method="POST" action="{{ route('shop.orders.cancel', $order->id) }}">
                     @csrf
                     <button type="submit"
                         onclick="return confirm('Bạn có chắc muốn hủy đơn hàng này không?')"
-                        class="text-sm text-red-500 hover:underline">Hủy</button>
+                        class="text-sm px-3 py-1.5 rounded-lg border border-red-500 text-red-500 hover:bg-red-50 transition">
+                        Hủy
+                    </button>
                 </form>
                 @endif
             </div>

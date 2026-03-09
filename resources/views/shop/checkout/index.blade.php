@@ -83,7 +83,7 @@
         @endforeach
         <div class="border-t pt-3 mt-3 flex justify-between font-bold">
             <span>Tổng cộng</span>
-            <span class="text-indigo-600">{{ number_format($total) }}đ</span>
+            <span class="text-indigo-600">{{ number_format($subtotal) }}đ</span>
         </div>
     </div>
 

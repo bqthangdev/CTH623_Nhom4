@@ -52,36 +52,71 @@
         </div>
         @endif
 
-        <div x-data="{ qty: 1 }" class="flex items-center gap-3 mb-4">
-            <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden">
-                <button @click="qty = Math.max(1, qty - 1)" class="px-3 py-2 hover:bg-gray-100">-</button>
-                <input type="number" x-model="qty" min="1" class="w-12 text-center border-x px-2 py-2 text-sm">
-                <button @click="qty++" class="px-3 py-2 hover:bg-gray-100">+</button>
+        <div x-data="{ qty: 1, loading: false, message: '', messageType: 'success' }">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden">
+                    <button @click="qty = Math.max(1, qty - 1)" class="px-3 py-2 hover:bg-gray-100">-</button>
+                    <input type="number" x-model="qty" min="1" class="w-12 text-center border-x px-2 py-2 text-sm">
+                    <button @click="qty++" class="px-3 py-2 hover:bg-gray-100">+</button>
+                </div>
+
+                @auth
+                <button
+                    :disabled="loading"
+                    @click="
+                        loading = true;
+                        fetch('{{ route('shop.cart.store') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({ product_id: {{ $product->id }}, quantity: qty })
+                        })
+                        .then(r => r.json())
+                        .then(d => {
+                            messageType = d.success ? 'success' : 'error';
+                            message = d.message;
+                            if (d.success) window.dispatchEvent(new CustomEvent('cart-updated', { detail: { count: d.cart_count } }));
+                            setTimeout(() => message = '', 3000);
+                        })
+                        .catch(() => {
+                            messageType = 'error';
+                            message = 'Không thể kết nối. Vui lòng thử lại.';
+                            setTimeout(() => message = '', 3000);
+                        })
+                        .finally(() => loading = false)
+                    "
+                    class="flex-1 bg-indigo-600 text-white py-2 px-6 rounded-lg hover:bg-indigo-700 transition font-medium disabled:opacity-50">
+                    <span x-text="loading ? 'Đang thêm...' : 'Thêm vào giỏ hàng'"></span>
+                </button>
+                @else
+                <a href="{{ route('login') }}"
+                   class="flex-1 bg-indigo-600 text-white py-2 px-6 rounded-lg hover:bg-indigo-700 transition font-medium text-center">
+                    Đăng nhập để mua hàng
+                </a>
+                @endauth
+
+                @auth
+                <form method="POST" action="{{ route('shop.wishlist.toggle') }}">
+                    @csrf
+                    <input type="hidden" name="product_id" value="{{ $product->id }}">
+                    <button type="submit" class="p-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                        </svg>
+                    </button>
+                </form>
+                @endauth
             </div>
-            <button
-                @click="
-                    fetch('/api/cart/items', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'application/json' },
-                        body: JSON.stringify({ product_id: {{ $product->id }}, quantity: qty })
-                    }).then(r => r.json()).then(d => {
-                        if(d.success) window.dispatchEvent(new CustomEvent('cart-updated', { detail: { count: d.cart_count } }));
-                    })
-                "
-                class="flex-1 bg-indigo-600 text-white py-2 px-6 rounded-lg hover:bg-indigo-700 transition font-medium">
-                Thêm vào giỏ hàng
-            </button>
 
             @auth
-            <form method="POST" action="{{ route('shop.wishlist.toggle') }}">
-                @csrf
-                <input type="hidden" name="product_id" value="{{ $product->id }}">
-                <button type="submit" class="p-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
-                    </svg>
-                </button>
-            </form>
+            <div x-show="message"
+                 x-text="message"
+                 :class="messageType === 'success' ? 'text-green-700 bg-green-50 border-green-300' : 'text-red-700 bg-red-50 border-red-300'"
+                 class="border rounded-lg px-4 py-2 text-sm mt-2">
+            </div>
             @endauth
         </div>
 

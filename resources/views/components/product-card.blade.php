@@ -1,7 +1,7 @@
 @props(['product'])
 
-<div class="bg-white rounded-lg shadow hover:shadow-md transition overflow-hidden group">
-    <a href="{{ route('shop.products.show', $product->slug) }}" class="block">
+<div class="bg-white rounded-lg shadow hover:shadow-md transition overflow-hidden group flex flex-col">
+    <a href="{{ route('shop.products.show', $product->slug) }}" class="block flex-1">
         <div class="aspect-square overflow-hidden bg-gray-100">
             <img src="{{ $product->image_url }}" alt="{{ $product->name }}"
                 class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
@@ -18,33 +18,50 @@
                 </span>
                 @endif
             </div>
-            @if($product->sale_price)
-            <span class="inline-block mt-1 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
-                -{{ round((1 - $product->sale_price / $product->price) * 100) }}%
-            </span>
-            @endif
+            <div class="h-6 mt-1">
+                @if($product->sale_price)
+                <span class="inline-block text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
+                    -{{ round((1 - $product->sale_price / $product->price) * 100) }}%
+                </span>
+                @endif
+            </div>
         </div>
     </a>
     <div class="px-4 pb-4">
+        @auth
         <button
-            x-data
+            x-data="{ loading: false, added: false }"
+            :disabled="loading"
             @click="
-                fetch('/api/cart/items', {
+                loading = true;
+                fetch('{{ route('shop.cart.store') }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                        'Accept': 'application/json',
+                        'Accept': 'application/json'
                     },
                     body: JSON.stringify({ product_id: {{ $product->id }}, quantity: 1 })
-                }).then(r => r.json()).then(data => {
-                    if (data.success) {
-                        window.dispatchEvent(new CustomEvent('cart-updated', { detail: { count: data.cart_count } }));
+                })
+                .then(r => r.json())
+                .then(d => {
+                    if (d.success) {
+                        added = true;
+                        window.dispatchEvent(new CustomEvent('cart-updated', { detail: { count: d.cart_count } }));
+                        setTimeout(() => added = false, 2000);
                     }
-                });
+                })
+                .finally(() => loading = false)
             "
-            class="w-full bg-indigo-600 text-white py-1.5 rounded-lg text-sm hover:bg-indigo-700 transition">
-            Thêm vào giỏ
+            :class="added ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'"
+            class="w-full text-white py-1.5 rounded-lg text-sm transition disabled:opacity-50">
+            <span x-text="loading ? 'Đang thêm...' : (added ? '✓ Đã thêm' : 'Thêm vào giỏ')"></span>
         </button>
+        @else
+        <a href="{{ route('login') }}"
+           class="block w-full bg-indigo-600 text-white py-1.5 rounded-lg text-sm hover:bg-indigo-700 transition text-center">
+            Thêm vào giỏ
+        </a>
+        @endauth
     </div>
 </div>

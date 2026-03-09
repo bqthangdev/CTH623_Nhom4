@@ -38,12 +38,14 @@
                     </span>
                 </td>
                 <td class="px-4 py-3 text-right">
-                    <a href="{{ route('admin.banners.edit', $banner->id) }}" class="text-indigo-600 hover:underline text-xs mr-2">Sửa</a>
-                    <form method="POST" action="{{ route('admin.banners.destroy', $banner->id) }}" class="inline">
-                        @csrf @method('DELETE')
-                        <button type="submit" onclick="return confirm('Xóa banner này?')"
-                            class="text-red-500 hover:underline text-xs">Xóa</button>
-                    </form>
+                    <div class="flex items-center justify-end gap-2">
+                        <a href="{{ route('admin.banners.edit', $banner->id) }}" class="text-sm px-3 py-1.5 rounded-lg border border-indigo-600 text-indigo-600 hover:bg-indigo-50 transition">Sửa</a>
+                        <form method="POST" action="{{ route('admin.banners.destroy', $banner->id) }}" class="inline">
+                            @csrf @method('DELETE')
+                            <button type="submit" onclick="return confirm('Xóa banner này?')"
+                                class="text-sm px-3 py-1.5 rounded-lg border border-red-500 text-red-500 hover:bg-red-50 transition">Xóa</button>
+                        </form>
+                    </div>
                 </td>
             </tr>
             @empty

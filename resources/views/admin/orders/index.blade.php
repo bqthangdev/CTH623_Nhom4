@@ -48,7 +48,7 @@
                     </span>
                 </td>
                 <td class="px-4 py-3 text-right">
-                    <a href="{{ route('admin.orders.show', $order->id) }}" class="text-indigo-600 hover:underline text-xs">Chi tiết</a>
+                    <a href="{{ route('admin.orders.show', $order->id) }}" class="text-sm px-3 py-1.5 rounded-lg border border-indigo-600 text-indigo-600 hover:bg-indigo-50 transition">Chi tiết</a>
                 </td>
             </tr>
             @empty

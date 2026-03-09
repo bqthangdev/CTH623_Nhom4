@@ -57,7 +57,19 @@
             </div>
             @if($order->discount_amount > 0)
             <div class="flex justify-between text-green-600">
-                <span>Giảm giá</span>
+                <span>
+                    Giảm giá
+                    @if($order->voucher)
+                    <span class="ml-1 font-mono bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded">
+                        {{ $order->voucher->code }}
+                    </span>
+                    <span class="text-xs text-green-500">
+                        ({{ $order->voucher->type === 'percent'
+                            ? '-' . number_format($order->voucher->value) . '%'
+                            : '-' . number_format($order->voucher->value) . 'đ cố định' }})
+                    </span>
+                    @endif
+                </span>
                 <span>-{{ number_format($order->discount_amount) }}đ</span>
             </div>
             @endif

@@ -4,7 +4,7 @@
 
 @section('content')
 
-<div class="max-w-2xl">
+<div>
     <a href="{{ route('admin.orders.index') }}" class="text-sm text-gray-500 hover:text-gray-700 mb-4 inline-block">← Quay lại</a>
 
     <div class="bg-white rounded-lg shadow p-6 space-y-5">
@@ -17,7 +17,7 @@
             </div>
             <form method="POST" action="{{ route('admin.orders.update', $order->id) }}" class="flex items-center gap-2">
                 @csrf @method('PUT')
-                <select name="status" class="border border-gray-300 rounded-lg px-2 py-1 text-sm">
+                <select name="status" class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm min-w-36 pr-8">
                     @foreach(['pending' => 'Chờ xác nhận', 'confirmed' => 'Đã xác nhận', 'shipping' => 'Đang giao', 'delivered' => 'Đã giao', 'cancelled' => 'Đã hủy'] as $val => $label)
                     <option value="{{ $val }}" {{ $order->status === $val ? 'selected' : '' }}>{{ $label }}</option>
                     @endforeach
@@ -60,7 +60,22 @@
         <div class="border-t pt-4 space-y-1 text-sm">
             <div class="flex justify-between"><span class="text-gray-600">Tạm tính</span><span>{{ number_format($order->total_amount) }}đ</span></div>
             @if($order->discount_amount > 0)
-            <div class="flex justify-between text-green-600"><span>Giảm giá</span><span>-{{ number_format($order->discount_amount) }}đ</span></div>
+            <div class="flex justify-between text-green-600">
+                <span class="flex items-center gap-1.5">
+                    Giảm giá
+                    @if($order->voucher)
+                    <span class="font-mono bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded">
+                        {{ $order->voucher->code }}
+                    </span>
+                    <span class="text-xs text-green-500">
+                        ({{ $order->voucher->type === 'percent'
+                            ? '-' . number_format($order->voucher->value) . '%'
+                            : '-' . number_format($order->voucher->value) . 'đ cố định' }})
+                    </span>
+                    @endif
+                </span>
+                <span>-{{ number_format($order->discount_amount) }}đ</span>
+            </div>
             @endif
             <div class="flex justify-between font-bold text-base border-t pt-2">
                 <span>Tổng cộng</span>

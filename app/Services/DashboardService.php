@@ -13,10 +13,10 @@ class DashboardService
     public function getSummary(): array
     {
         return [
-            'total_orders'    => Order::count(),
-            'total_revenue'   => Order::where('status', 'delivered')->sum('total'),
-            'total_customers' => User::where('role', 'customer')->count(),
-            'total_products'  => Product::count(),
+            'totalOrders'    => Order::count(),
+            'totalRevenue'   => Order::where('status', 'delivered')->sum('total'),
+            'totalCustomers' => User::where('role', 'customer')->count(),
+            'totalProducts'  => Product::count(),
         ];
     }
 

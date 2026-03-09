@@ -34,14 +34,17 @@
                         {{ $customer->is_active ? 'Hoạt động' : 'Bị khóa' }}
                     </span>
                 </td>
-                <td class="px-4 py-3 text-right space-x-2">
-                    <a href="{{ route('admin.customers.show', $customer->id) }}" class="text-indigo-600 hover:underline text-xs">Xem</a>
-                    <form method="POST" action="{{ route('admin.customers.toggle-active', $customer->id) }}" class="inline">
-                        @csrf
-                        <button type="submit" class="text-xs {{ $customer->is_active ? 'text-red-500' : 'text-green-600' }} hover:underline">
-                            {{ $customer->is_active ? 'Khóa' : 'Mở khóa' }}
-                        </button>
-                    </form>
+                <td class="px-4 py-3 text-right">
+                    <div class="flex items-center justify-end gap-2">
+                        <a href="{{ route('admin.customers.show', $customer->id) }}" class="text-sm px-3 py-1.5 rounded-lg border border-indigo-600 text-indigo-600 hover:bg-indigo-50 transition">Xem</a>
+                        <form method="POST" action="{{ route('admin.customers.toggle-active', $customer->id) }}" class="inline">
+                            @csrf
+                            <button type="submit"
+                                class="text-sm px-3 py-1.5 rounded-lg border transition {{ $customer->is_active ? 'border-red-500 text-red-500 hover:bg-red-50' : 'border-green-600 text-green-600 hover:bg-green-50' }}">
+                                {{ $customer->is_active ? 'Khóa' : 'Mở khóa' }}
+                            </button>
+                        </form>
+                    </div>
                 </td>
             </tr>
             @empty

@@ -8,6 +8,7 @@ use App\Http\Requests\Shop\UpdateCartItemRequest;
 use App\Models\CartItem;
 use App\Models\Product;
 use App\Services\CartService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -28,17 +29,28 @@ class CartController extends Controller
         return view('shop.cart.index', compact('cartItems', 'total'));
     }
 
-    public function store(AddToCartRequest $request): RedirectResponse
+    public function store(AddToCartRequest $request): RedirectResponse|JsonResponse
     {
         /** @var \App\Models\User $user */
         $user    = $request->user();
         $product = Product::findOrFail($request->validated('product_id'));
 
         if ($product->stock < $request->validated('quantity')) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Sản phẩm không đủ số lượng trong kho.'], 422);
+            }
             return back()->with('error', 'Sản phẩm không đủ số lượng trong kho.');
         }
 
         $this->cartService->addItem($user, $product->id, $request->validated('quantity'));
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success'    => true,
+                'cart_count' => $this->cartService->getCount($user),
+                'message'    => 'Đã thêm vào giỏ hàng!',
+            ]);
+        }
 
         return back()->with('success', 'Đã thêm vào giỏ hàng!');
     }
