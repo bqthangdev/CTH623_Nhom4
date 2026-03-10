@@ -68,6 +68,19 @@ class Order extends Model
         };
     }
 
+    /**
+     * Returns the list of statuses admin is allowed to transition to from current status.
+     * shipping/delivered/cancelled are locked for admin.
+     */
+    public function allowedAdminTransitions(): array
+    {
+        return match ($this->status) {
+            'pending'   => ['confirmed', 'cancelled'],
+            'confirmed' => ['shipping', 'cancelled'],
+            default     => [],
+        };
+    }
+
     public function getTotalAmountAttribute(): string
     {
         return $this->subtotal;

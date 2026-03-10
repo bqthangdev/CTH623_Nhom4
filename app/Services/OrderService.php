@@ -85,12 +85,39 @@ class OrderService
         });
     }
 
+    public function updateStatus(Order $order, string $newStatus): Order
+    {
+        $allowed = $order->allowedAdminTransitions();
+
+        if (! in_array($newStatus, $allowed, true)) {
+            throw ValidationException::withMessages([
+                'status' => 'Không thể chuyển sang trạng thái này từ trạng thái hiện tại.',
+            ]);
+        }
+
+        $order->update(['status' => $newStatus]);
+
+        return $order->fresh();
+    }
+
+    public function confirmDelivery(User $user, int $orderId): Order
+    {
+        $order = $this->orderRepository->findForUser($orderId, $user->id);
+
+        abort_if(! $order, 404);
+        abort_if($order->status !== 'shipping', 422, 'Chỉ có thể xác nhận đã nhận hàng với đơn đang được giao.');
+
+        $order->update(['status' => 'delivered']);
+
+        return $order->fresh();
+    }
+
     public function cancelOrder(User $user, int $orderId): Order
     {
         $order = $this->orderRepository->findForUser($orderId, $user->id);
 
         abort_if(! $order, 404);
-        abort_if($order->status !== 'pending', 422, 'Chỉ có thể hủy đơn hàng đang chờ xác nhận.');
+        abort_if(! in_array($order->status, ['pending', 'confirmed'], true), 422, 'Chỉ có thể hủy đơn hàng chưa được giao.');
 
         $order->update(['status' => 'cancelled']);
 

@@ -84,6 +84,19 @@
             Thanh toán: {{ $order->payment_method === 'cod' ? 'Tiền mặt khi nhận hàng (COD)' : 'VNPay' }}
         </div>
 
+        @if($order->status === 'shipping')
+        <div class="border-t pt-4">
+            <form method="POST" action="{{ route('shop.orders.confirm-delivery', $order->id) }}">
+                @csrf
+                <button type="submit"
+                    onclick="return confirm('Bạn xác nhận đã nhận được hàng?')"
+                    class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition text-sm font-medium">
+                    Đã nhận hàng
+                </button>
+            </form>
+        </div>
+        @endif
+
         @if(in_array($order->status, ['pending', 'confirmed']))
         <div class="border-t pt-4">
             <form method="POST" action="{{ route('shop.orders.cancel', $order->id) }}">

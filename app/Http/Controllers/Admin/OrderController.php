@@ -6,13 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateOrderStatusRequest;
 use App\Models\Order;
 use App\Repositories\OrderRepository;
+use App\Services\OrderService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class OrderController extends Controller
 {
-    public function __construct(private readonly OrderRepository $orderRepository) {}
+    public function __construct(
+        private readonly OrderRepository $orderRepository,
+        private readonly OrderService $orderService,
+    ) {}
 
     public function index(Request $request): View
     {
@@ -34,7 +39,11 @@ class OrderController extends Controller
 
     public function update(UpdateOrderStatusRequest $request, Order $order): RedirectResponse
     {
-        $order->update(['status' => $request->validated('status')]);
+        try {
+            $this->orderService->updateStatus($order, $request->validated('status'));
+        } catch (ValidationException $e) {
+            return back()->with('error', collect($e->errors())->flatten()->first());
+        }
 
         return back()->with('success', 'Cập nhật trạng thái đơn hàng thành công!');
     }

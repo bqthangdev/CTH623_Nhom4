@@ -32,8 +32,15 @@ class OrderController extends Controller
 
     public function cancel(int $order): RedirectResponse
     {
-        $order = $this->orderService->cancelOrder(auth()->user(), $order);
+        $this->orderService->cancelOrder(auth()->user(), $order);
 
         return back()->with('success', 'Đơn hàng đã được hủy.');
+    }
+
+    public function confirmDelivery(int $order): RedirectResponse
+    {
+        $this->orderService->confirmDelivery(auth()->user(), $order);
+
+        return back()->with('success', 'Cảm ơn bạn đã xác nhận nhận hàng!');
     }
 }

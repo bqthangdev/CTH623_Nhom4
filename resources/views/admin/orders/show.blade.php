@@ -15,17 +15,34 @@
                 <h2 class="text-lg font-bold">Đơn hàng #{{ $order->id }}</h2>
                 <p class="text-sm text-gray-500">{{ $order->created_at->format('d/m/Y H:i') }}</p>
             </div>
-            <form method="POST" action="{{ route('admin.orders.update', $order->id) }}" class="flex items-center gap-2">
-                @csrf @method('PUT')
-                <select name="status" class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm min-w-36 pr-8">
-                    @foreach(['pending' => 'Chờ xác nhận', 'confirmed' => 'Đã xác nhận', 'shipping' => 'Đang giao', 'delivered' => 'Đã giao', 'cancelled' => 'Đã hủy'] as $val => $label)
-                    <option value="{{ $val }}" {{ $order->status === $val ? 'selected' : '' }}>{{ $label }}</option>
-                    @endforeach
-                </select>
-                <button type="submit" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-indigo-700 transition">
-                    Cập nhật
-                </button>
-            </form>
+            @php
+                $statusLabels = ['pending' => 'Chờ xác nhận', 'confirmed' => 'Đã xác nhận', 'shipping' => 'Đang giao', 'delivered' => 'Đã giao', 'cancelled' => 'Đã hủy'];
+                $transitions  = $order->allowedAdminTransitions();
+            @endphp
+            <div class="flex items-center gap-3">
+                <span class="px-3 py-1.5 rounded-full text-sm font-medium
+                    {{ $order->status === 'delivered' ? 'bg-green-100 text-green-700' :
+                       ($order->status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700') }}">
+                    {{ $order->status_label }}
+                </span>
+                @if(!empty($transitions))
+                <form method="POST" action="{{ route('admin.orders.update', $order->id) }}" class="flex items-center gap-2">
+                    @csrf @method('PUT')
+                    <select name="status" class="border border-gray-300 rounded-lg pl-3 pr-8 py-1.5 text-sm min-w-36 appearance-auto">
+                        @foreach($transitions as $val)
+                        <option value="{{ $val }}">{{ $statusLabels[$val] }}</option>
+                        @endforeach
+                    </select>
+                    <button type="submit" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-indigo-700 transition">
+                        Cập nhật
+                    </button>
+                </form>
+                @elseif($order->status === 'shipping')
+                <span class="text-sm text-gray-500 italic">Chờ khách hàng xác nhận đã nhận hàng</span>
+                @else
+                <span class="text-sm text-gray-500 italic">Đã kết thúc</span>
+                @endif
+            </div>
         </div>
 
         {{-- Customer info --}}

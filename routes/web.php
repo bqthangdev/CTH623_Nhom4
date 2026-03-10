@@ -32,6 +32,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/orders', [Shop\OrderController::class, 'index'])->name('shop.orders.index');
     Route::get('/orders/{order}', [Shop\OrderController::class, 'show'])->name('shop.orders.show');
     Route::post('/orders/{order}/cancel', [Shop\OrderController::class, 'cancel'])->name('shop.orders.cancel');
+    Route::post('/orders/{order}/confirm-delivery', [Shop\OrderController::class, 'confirmDelivery'])->name('shop.orders.confirm-delivery');
 
     // Đánh giá
     Route::post('/products/{product}/reviews', [Shop\ReviewController::class, 'store'])->name('shop.reviews.store');
