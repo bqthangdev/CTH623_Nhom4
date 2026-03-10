@@ -23,6 +23,7 @@ SmartShop là nền tảng thương mại điện tử tích hợp AI xây dựn
 - Quản lý đơn hàng (cập nhật trạng thái, xem chi tiết)
 - Quản lý mã giảm giá (voucher)
 - Quản lý banner trang chủ
+- Quản lý phương thức thanh toán (bật/tắt, cấu hình cổng thanh toán ngoài)
 - Quản lý khách hàng (kích hoạt / vô hiệu hóa)
 
 ---
@@ -57,7 +58,7 @@ smartshop/
 │   │       ├── Admin/          # Form Requests cho admin
 │   │       ├── Api/            # Form Requests cho API
 │   │       └── Shop/           # Form Requests cho shop
-│   ├── Models/                 # 14 Eloquent models
+│   ├── Models/                 # 15 Eloquent models
 │   ├── Repositories/           # ProductRepository, OrderRepository
 │   ├── Services/               # CartService, CategoryService, DashboardService,
 │   │                           # OrderService, ProductService, RecommendationService,
@@ -69,15 +70,15 @@ smartshop/
 │   └── routers/                # visual_search, recommendations
 ├── database/
 │   ├── factories/              # Model factories
-│   ├── migrations/             # 7 migration files, 14 bảng ứng dụng
-│   └── seeders/                # UserSeeder, CategorySeeder, ProductSeeder, BannerSeeder
+│   ├── migrations/             # 8 migration files, 15 bảng ứng dụng
+│   └── seeders/                # UserSeeder, CategorySeeder, ProductSeeder, BannerSeeder, PaymentMethodSeeder
 ├── docs/
 │   ├── CODING_STANDARDS.md
 │   ├── TESTING_GUIDELINES.md
 │   └── HUONG_DAN_KHOI_CHAY.md # Hướng dẫn khởi chạy dự án
 ├── resources/
 │   └── views/
-│       ├── admin/              # 20 Blade views cho admin
+│       ├── admin/              # 25 Blade views cho admin
 │       ├── auth/               # Views xác thực
 │       ├── components/         # Shared Blade components
 │       ├── layouts/            # app.blade.php, admin.blade.php
@@ -144,7 +145,7 @@ php artisan embeddings:generate
 
 ## Database
 
-14 bảng được tổ chức theo nhóm:
+15 bảng ứng dụng được tổ chức theo nhóm:
 
 | Nhóm | Bảng |
 |---|---|
@@ -153,6 +154,7 @@ php artisan embeddings:generate
 | Sản phẩm | `products`, `product_images`, `product_attributes`, `product_embeddings` |
 | Đơn hàng | `vouchers`, `orders`, `order_items` |
 | Tương tác | `cart_items`, `wishlists`, `reviews`, `banners`, `user_activities` |
+| Thanh toán | `payment_methods` |
 
 ---
 

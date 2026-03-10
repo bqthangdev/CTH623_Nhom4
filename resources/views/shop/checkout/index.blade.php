@@ -47,14 +47,16 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Phương thức thanh toán <span class="text-red-500">*</span></label>
                 <div class="space-y-2">
+                    @foreach($paymentMethods as $pm)
                     <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="payment_method" value="cod" {{ old('payment_method', 'cod') === 'cod' ? 'checked' : '' }}>
-                        <span class="text-sm">Thanh toán khi nhận hàng (COD)</span>
+                        <input type="radio" name="payment_method" value="{{ $pm->code }}"
+                            {{ old('payment_method', $paymentMethods->first()?->code) === $pm->code ? 'checked' : '' }}>
+                        <span class="text-sm">{{ $pm->name }}</span>
+                        @if($pm->description)
+                        <span class="text-xs text-gray-400">— {{ $pm->description }}</span>
+                        @endif
                     </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="payment_method" value="vnpay" {{ old('payment_method') === 'vnpay' ? 'checked' : '' }}>
-                        <span class="text-sm">VNPay</span>
-                    </label>
+                    @endforeach
                 </div>
                 @error('payment_method')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
             </div>

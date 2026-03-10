@@ -27,7 +27,7 @@
             @forelse($banners as $banner)
             <tr class="hover:bg-gray-50">
                 <td class="px-4 py-3">
-                    <img src="{{ asset('storage/' . $banner->image) }}" alt="{{ $banner->title }}"
+                    <img src="{{ $banner->image_url }}" alt="{{ $banner->title }}"
                         class="w-20 h-10 object-cover rounded bg-gray-100">
                 </td>
                 <td class="px-4 py-3 font-medium">{{ $banner->title }}</td>

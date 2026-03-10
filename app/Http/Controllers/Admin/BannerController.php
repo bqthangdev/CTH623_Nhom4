@@ -43,6 +43,7 @@ class BannerController extends Controller
     public function update(UpdateBannerRequest $request, Banner $banner): RedirectResponse
     {
         $data = $request->validated();
+        unset($data['image']); // preserve existing image unless a new file is uploaded
 
         if ($request->hasFile('image')) {
             Storage::disk('public')->delete($banner->image);

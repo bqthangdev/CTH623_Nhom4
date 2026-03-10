@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Shop;
 
+use App\Models\PaymentMethod;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class CheckoutRequest extends FormRequest
 {
@@ -13,11 +15,13 @@ class CheckoutRequest extends FormRequest
 
     public function rules(): array
     {
+        $activeCodes = PaymentMethod::active()->pluck('code')->all();
+
         return [
             'recipient_name'   => ['required', 'string', 'max:255'],
             'phone'            => ['required', 'string', 'max:20'],
             'shipping_address' => ['required', 'string', 'max:500'],
-            'payment_method'   => ['required', 'in:cod,vnpay'],
+            'payment_method'   => ['required', 'string', Rule::in($activeCodes)],
             'voucher_code'     => ['nullable', 'string', 'max:50'],
             'note'             => ['nullable', 'string', 'max:500'],
         ];

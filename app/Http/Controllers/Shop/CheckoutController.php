@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Shop;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Shop\CheckoutRequest;
+use App\Models\PaymentMethod;
 use App\Services\CartService;
 use App\Services\OrderService;
 use Illuminate\Http\RedirectResponse;
@@ -24,9 +25,10 @@ class CheckoutController extends Controller
             return redirect()->route('shop.cart.index')->with('error', 'Giỏ hàng của bạn đang trống.');
         }
 
-        $subtotal = $this->cartService->getTotal(auth()->user());
+        $subtotal       = $this->cartService->getTotal(auth()->user());
+        $paymentMethods = PaymentMethod::active()->get();
 
-        return view('shop.checkout.index', compact('cartItems', 'subtotal'));
+        return view('shop.checkout.index', compact('cartItems', 'subtotal', 'paymentMethods'));
     }
 
     public function store(CheckoutRequest $request): RedirectResponse

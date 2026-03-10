@@ -65,6 +65,7 @@ Route::prefix('admin')
         Route::post('customers/{customer}/toggle-active', [Admin\CustomerController::class, 'toggleActive'])->name('customers.toggle-active');
         Route::resource('banners', Admin\BannerController::class);
         Route::resource('vouchers', Admin\VoucherController::class);
+        Route::resource('payment-methods', Admin\PaymentMethodController::class);
     });
 
 require __DIR__.'/auth.php';

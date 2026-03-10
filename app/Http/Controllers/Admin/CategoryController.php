@@ -37,7 +37,7 @@ class CategoryController extends Controller
             ? $request->file('image')->store('categories', 'public')
             : null;
 
-        $this->categoryService->create($request->validated(), $imagePath);
+        $this->categoryService->create($request->safe()->except('image'), $imagePath);
 
         return redirect()->route('admin.categories.index')
             ->with('success', 'Tạo danh mục thành công!');
@@ -60,7 +60,7 @@ class CategoryController extends Controller
             ? $request->file('image')->store('categories', 'public')
             : null;
 
-        $this->categoryService->update($category, $request->validated(), $imagePath);
+        $this->categoryService->update($category, $request->safe()->except('image'), $imagePath);
 
         return redirect()->route('admin.categories.index')
             ->with('success', 'Cập nhật danh mục thành công!');

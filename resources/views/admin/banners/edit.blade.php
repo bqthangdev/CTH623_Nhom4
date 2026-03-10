@@ -20,7 +20,7 @@
 
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Ảnh banner mới</label>
-            <img src="{{ asset('storage/' . $banner->image) }}" alt="{{ $banner->title }}"
+            <img src="{{ $banner->image_url }}" alt="{{ $banner->title }}"
                 class="w-48 h-24 object-cover rounded-lg bg-gray-100 mb-2">
             <input type="file" name="image" accept="image/jpeg,image/png,image/webp"
                 class="block text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-indigo-50 file:text-indigo-600">

@@ -9,7 +9,7 @@
 <div x-data="{ current: 0 }" class="relative rounded-xl overflow-hidden mb-8 h-64 md:h-96">
     @foreach($banners as $i => $banner)
     <div x-show="current === {{ $i }}" class="absolute inset-0 transition-opacity duration-500">
-        <img src="{{ asset('storage/' . $banner->image) }}" alt="{{ $banner->title }}"
+        <img src="{{ $banner->image_url }}" alt="{{ $banner->title }}"
             class="w-full h-full object-cover">
         @if($banner->link)
         <a href="{{ $banner->link }}" class="absolute inset-0"></a>

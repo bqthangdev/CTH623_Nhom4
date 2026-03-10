@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 class Product extends Model
 {
@@ -88,8 +89,10 @@ class Product extends Model
     {
         $primary = $this->primaryImage ?? $this->images->first();
 
-        return $primary
-            ? asset('storage/' . $primary->image_path)
-            : asset('images/no-image.png');
+        if ($primary && Storage::disk('public')->exists($primary->image_path)) {
+            return asset('storage/' . $primary->image_path);
+        }
+
+        return asset('images/no-image.svg');
     }
 }

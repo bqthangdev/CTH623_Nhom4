@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\ProductImage;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
@@ -61,15 +60,6 @@ class ProductSeeder extends Seeder
                     'description' => 'Sản phẩm chất lượng cao, được lựa chọn kỹ càng cho khách hàng SmartShop.',
                 ]
             );
-
-            // Placeholder image if no images yet
-            if ($product->images()->doesntExist()) {
-                ProductImage::create([
-                    'product_id' => $product->id,
-                    'image_path' => 'products/placeholder.png',
-                    'is_primary' => true,
-                ]);
-            }
         }
     }
 }

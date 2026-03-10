@@ -24,8 +24,8 @@
         <label class="block text-sm font-medium text-gray-700 mb-1">Ảnh danh mục</label>
         <input type="file" name="image" accept="image/jpeg,image/png,image/webp"
             class="block text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-indigo-50 file:text-indigo-600">
-        @if(isset($category) && $category->image)
-        <img src="{{ asset('storage/' . $category->image) }}" alt="" class="w-20 h-20 object-cover rounded-lg mt-2 bg-gray-100">
+        @if(isset($category) && $category->image_url)
+        <img src="{{ $category->image_url }}" alt="" class="w-20 h-20 object-cover rounded-lg mt-2 bg-gray-100">
         @endif
         @error('image')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
     </div>

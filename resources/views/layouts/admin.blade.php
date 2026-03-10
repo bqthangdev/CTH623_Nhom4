@@ -28,8 +28,9 @@
                     ['route' => 'admin.categories.index', 'label' => 'Danh mục'],
                     ['route' => 'admin.orders.index',     'label' => 'Đơn hàng'],
                     ['route' => 'admin.customers.index',  'label' => 'Khách hàng'],
-                    ['route' => 'admin.banners.index',    'label' => 'Banner'],
-                    ['route' => 'admin.vouchers.index',   'label' => 'Voucher'],
+                    ['route' => 'admin.banners.index',           'label' => 'Banner'],
+                    ['route' => 'admin.vouchers.index',           'label' => 'Voucher'],
+                    ['route' => 'admin.payment-methods.index',   'label' => 'Thanh toán'],
                 ];
             @endphp
             @foreach($navItems as $item)
