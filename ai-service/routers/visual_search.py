@@ -56,6 +56,7 @@ _embeddings: dict[int, np.ndarray] = {}
 _clip_model = None
 _clip_preprocess = None
 _clip_tokenizer = None
+_clip_embedding_dim: int = 512  # updated at startup; 512 for ViT-B/32, 768 for ViT-L/14
 
 # Pre-computed CLIP text embeddings for zero-shot classification
 # Parallel lists: _text_labels[i] ↔ _text_embeddings[i]
@@ -88,7 +89,7 @@ def load_clip_model() -> None:
     Called once at application startup. The first call downloads the model
     weights (~350 MB for ViT-B/32) to the system cache if not already present.
     """
-    global _clip_model, _clip_preprocess, _clip_tokenizer
+    global _clip_model, _clip_preprocess, _clip_tokenizer, _clip_embedding_dim
     if not _CLIP_AVAILABLE:
         print("[visual_search] open-clip-torch not installed — using color histogram fallback.")
         return
@@ -98,7 +99,11 @@ def load_clip_model() -> None:
         )
         _clip_model.eval()
         _clip_tokenizer = open_clip.get_tokenizer(CLIP_MODEL_NAME)
-        print(f"[visual_search] CLIP model '{CLIP_MODEL_NAME}' loaded.")
+        # Detect actual output dimension (512 for ViT-B/32, 768 for ViT-L/14, etc.)
+        _dummy = _clip_preprocess(Image.new("RGB", (224, 224))).unsqueeze(0)
+        with torch.no_grad():
+            _clip_embedding_dim = int(_clip_model.encode_image(_dummy).shape[1])
+        print(f"[visual_search] CLIP model '{CLIP_MODEL_NAME}' loaded ({_clip_embedding_dim}-dim).")
     except Exception as exc:
         print(f"[visual_search] Failed to load CLIP model: {exc}")
         _clip_model = None
@@ -254,7 +259,7 @@ def _detect_object(image_vec: np.ndarray) -> Optional[str]:
 def _active_embedding_method() -> str:
     """Return a human-readable label for the embedding method currently in use."""
     if _clip_model is not None:
-        return f"CLIP {CLIP_MODEL_NAME} (512-dim)"
+        return f"CLIP {CLIP_MODEL_NAME} ({_clip_embedding_dim}-dim)"
     return "color histogram fallback (576-dim)"
 
 

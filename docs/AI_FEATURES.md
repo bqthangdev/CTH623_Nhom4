@@ -32,7 +32,8 @@ AI Service – FastAPI (port 8001)
    ├── POST /api/embeddings/store
    ├── POST /api/embeddings/generate
    ├── GET  /api/recommendations/similar
-   └── GET  /api/recommendations/personal
+   ├── GET  /api/recommendations/personal
+   └── GET  /api/recommendations/collaborative
 ```
 
 ### Các file liên quan
@@ -259,6 +260,7 @@ Người dùng đã đăng nhập truy cập trang chủ
 | Method | URI | Mục đích |
 |---|---|---|
 | `GET` | `/api/products/{product}/recommendations` | Endpoint JSON — sản phẩm tương tự |
+| `GET` | `/api/recommendations/collaborative?user_id=Y` | Pure item-item CF (không yêu cầu Sanctum) |
 
 ### AI Service endpoints
 
@@ -270,6 +272,13 @@ Người dùng đã đăng nhập truy cập trang chủ
 | `limit` | `int` | Không (mặc định 8) | Số lượng kết quả |
 
 **`GET /api/recommendations/personal`** — query params:
+
+| Param | Kiểu | Bắt buộc | Mô tả |
+|---|---|---|---|
+| `user_id` | `int` | Có | ID người dùng |
+| `limit` | `int` | Không (mặc định 8) | Số lượng kết quả |
+
+**`GET /api/recommendations/collaborative`** — query params:
 
 | Param | Kiểu | Bắt buộc | Mô tả |
 |---|---|---|---|
@@ -301,20 +310,30 @@ Người dùng đã đăng nhập truy cập trang chủ
 2. Xây dựng **recency-weighted taste profile**: mỗi embedding sản phẩm đã mua được nhân
    với trọng số `exp(-days_old / 30)` — sản phẩm mua gần đây đóng góp nhiều hơn.
 3. Chuẩn hoá L2 vector trung bình có trọng số.
-4. Tính cosine similarity với tất cả sản phẩm chưa mua → lọc theo threshold → đa dạng hóa.
+4. Tính cosine similarity với tất cả sản phẩm chưa mua.
+5. Tính **item-item CF score**: với mỗi sản phẩm ứng viên, tổng hợp tần suất xuất hiện
+   cùng đơn hàng với các sản phẩm người dùng đã mua (co-purchase matrix toàn site).
+6. **Unified blending** ba tín hiệu với trọng số thay đổi theo lịch sử mua:
+
+| Số SP đã mua | clip_w | cf_w | pop_w |
+|---|---|---|---|
+| 1 | 0.68 | 0.12 | 0.20 |
+| 2 | 0.67 | 0.23 | 0.10 |
+| ≥ 3 | 0.65 | 0.35 | 0.00 |
+
+Threshold vẫn áp dụng trên **cosine similarity thuần** (độc lập với blend)
+để đảm bảo ngưỡng chất lượng ngữ nghĩa tối thiểu.
+
+**Collaborative Filtering thuần (`/recommendations/collaborative`):**
+1. Xây dựng ma trận co-purchase: đếm số đơn hàng có cả sản phẩm A và B trên toàn site.
+2. Với lịch sử mua của người dùng, tổng hợp điểm co-purchase cho từng ứng viên.
+3. Chuẩn hoá và đa dạng hoá kết quả theo danh mục.
+4. Fallback về phổ biến toàn site khi chưa có dữ liệu co-purchase.
 
 **Xử lý sparse history (cold-start):** Khi người dùng có ít hơn 3 sản phẩm đã mua
-có embedding, taste profile không đủ đáng tin cậy. Hệ thống tự động **pha trộn**
-cosine similarity với tín hiệu **phổ biến toàn site** (`popularity blending`):
-
-| Số sản phẩm đã mua | Trọng số similarity | Trọng số popularity |
-|---|---|---|
-| 1 | 70% | 30% |
-| 2 | 85% | 15% |
-| ≥ 3 | 100% | 0% |
-
-Threshold vẫn áp dụng trên **cosine similarity thuần** (không phải điểm blended)
-để đảm bảo ngưỡng chất lượng ngữ nghĩa tối thiểu.
+có embedding, taste profile không đủ đáng tin cậy. Hệ thống tự động điều chỉnh trọng số
+(xem bảng trên): theo tỉ lệ `ratio = min(1, history_size / 3)`, điểm
+CF tăng dần trong khi điểm popularity giảm dần.
 
 **Lưu ý:** Laravel giữ nguyên thứ tự mà AI trả về khi map sang Eloquent Collection:
 
@@ -378,6 +397,15 @@ Cấu hình trong `config/services.php`, đọc từ `.env`:
 > Timeout của Recommendations được hardcode là `10` giây trong `RecommendationService`
 > để trang sản phẩm không bị chờ lâu.
 
+Các biến tùy chỉnh AI Service (thêm vào `.env` của AI Service):
+
+| Biến môi trường | Mặc định | Mô tả |
+|---|---|---|
+| `VISUAL_SEARCH_THRESHOLD` | `0.60` | Ngưỡng cosine similarity cho Visual Search |
+| `RECOMMENDATION_THRESHOLD` | `0.40` | Ngưỡng cosine similarity cho Recommendations |
+| `CF_BLEND_WEIGHT` | `0.35` | Trọng số tối đa của tín hiệu CF trong personal blend |
+| `CLIP_MODEL` | `ViT-B-32` | Tên model CLIP (`ViT-B-32` hoặc `ViT-L-14`) |
+
 ---
 
 ## 5. Nâng cấp độ chính xác thêm
@@ -403,8 +431,13 @@ CLIP ViT-B/32 hoạt động tốt với hầu hết loại sản phẩm. Để 
   - Recency-weighted taste profile — mua gần đây ảnh hưởng nhiều hơn.
   - Category diversity — tối đa 2 sản phẩm/danh mục.
   - **Popularity blending** — giảm cold-start khi người dùng có ít lịch sử mua.
+  - **Item-item Collaborative Filtering** — tín hiệu hành vi (co-purchase) được pha trộn
+    với CLIP similarity; trọng số CF tăng dần theo lịch sử mua (đến tối đa `CF_BLEND_WEIGHT`).
+  - **Endpoint CF thuần** (`/recommendations/collaborative`) — kết quả dựa hoàn toàn
+    vào tần suất cùng đơn hàng, không cần CLIP embeddings.
+  - **CLIP ViT-L/14** hỗ trợ qua biến môi trường `CLIP_MODEL=ViT-L-14`; dimension
+    được phát hiện tự động khi khởi động, không cần sửa code.
 - **Cải tiến tiếp theo:**
-  - **CLIP ViT-L/14:** cùng cấu hình như Visual Search — phần chất lượng embedding
-    cải thiện tự động cho cả hai tính năng.
-  - **Collaborative filtering chuyên sâu:** dùng matrix factorization (SVD, ALS) trên
-    toàn bộ `order_items` để nắm bắt pattern "người mua X cũng mua Y" ở quy mô lớn.
+  - **Collaborative filtering nâng cao:** dùng matrix factorization (SVD, ALS) trên
+    toàn bộ `order_items` để nắm bắt pattern ẩn ở quy mô lớn — phù hợp khi catalog
+    và số người dùng đã tăng trưởng đủ lớn (> 1.000 user, > 100 sản phẩm).

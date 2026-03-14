@@ -207,7 +207,8 @@ php artisan embeddings:generate
 | POST | `/api/embeddings/store` | Lưu embedding vào DB |
 | POST | `/api/embeddings/generate` | Tính và lưu embedding (legacy) |
 | GET | `/api/recommendations/similar` | Sản phẩm tương tự |
-| GET | `/api/recommendations/personal` | Gợi ý cá nhân hóa |
+| GET | `/api/recommendations/personal` | Gợi ý cá nhân hóa (CLIP + CF + popularity) |
+| GET | `/api/recommendations/collaborative` | Item-item Collaborative Filtering thuần |
 | GET | `/health` | Health check |
 
 ---
