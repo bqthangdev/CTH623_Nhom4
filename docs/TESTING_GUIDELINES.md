@@ -67,37 +67,40 @@ public function test_customer_can_add_product_to_cart(): void
 
 ## 2. Cấu trúc thư mục test
 
+> Ký hiệu: ✅ đã triển khai — 📝 chưa triển khai (mục tiêu)
+
 ```
 tests/
 ├── Unit/
 │   ├── Services/
-│   │   ├── CartServiceTest.php
-│   │   ├── OrderServiceTest.php
-│   │   ├── PricingServiceTest.php
-│   │   ├── RecommendationServiceTest.php
-│   │   └── VisualSearchServiceTest.php
+│   │   ├── CartServiceTest.php               ✅
+│   │   ├── RecommendationServiceTest.php      ✅
+│   │   ├── OrderServiceTest.php               📝
+│   │   ├── PricingServiceTest.php             📝
+│   │   └── VisualSearchServiceTest.php        📝
 │   ├── Models/
-│   │   └── ProductTest.php
+│   │   └── ProductTest.php                   ✅
 │   └── Helpers/
-│       └── PriceFormatterTest.php
+│       └── PriceFormatterTest.php             📝
 │
 ├── Feature/
+│   ├── Auth/                                  ✅ (6 files — Breeze)
 │   ├── Shop/
-│   │   ├── ProductBrowsingTest.php     → Duyệt, tìm kiếm sản phẩm
-│   │   ├── CartTest.php                → Giỏ hàng
-│   │   ├── CheckoutTest.php            → Thanh toán
-│   │   ├── OrderTest.php               → Đặt hàng, xem lịch sử
-│   │   ├── AuthTest.php                → Đăng ký, đăng nhập
-│   │   ├── ReviewTest.php              → Đánh giá sản phẩm
-│   │   ├── WishlistTest.php            → Yêu thích
-│   │   └── VisualSearchTest.php        → Tìm kiếm bằng ảnh
+│   │   ├── CartTest.php                       ✅
+│   │   ├── CheckoutTest.php                   ✅
+│   │   ├── VisualSearchTest.php               ✅
+│   │   ├── ProductBrowsingTest.php            📝
+│   │   ├── OrderTest.php                      📝
+│   │   ├── AuthTest.php                       📝
+│   │   ├── ReviewTest.php                     📝
+│   │   └── WishlistTest.php                   📝
 │   │
 │   └── Admin/
-│       ├── ProductManagementTest.php   → CRUD sản phẩm
-│       ├── CategoryManagementTest.php  → CRUD danh mục
-│       ├── OrderManagementTest.php     → Quản lý đơn hàng
-│       ├── DashboardTest.php           → Dashboard, thống kê
-│       └── AuthorizationTest.php      → Phân quyền admin
+│       ├── AuthorizationTest.php              ✅
+│       ├── ProductManagementTest.php          ✅
+│       ├── CategoryManagementTest.php         📝
+│       ├── OrderManagementTest.php            📝
+│       └── DashboardTest.php                  📝
 │
 └── TestCase.php
 ```
@@ -952,6 +955,70 @@ class RecommendationServiceTest extends TestCase
 
 ---
 
+## 11. Đánh giá độ chính xác AI (Offline Accuracy Evaluation)
+
+Ngoài các PHP test dùng mock, AI Service đi kèm một script Python độc lập để
+**đo chất lượng thực tế** của hai tính năng AI ngay trên dữ liệu sản phẩm và
+lịch sử mua trong DB — không cần FastAPI server đang chạy.
+
+### File
+
+```
+ai-service/evaluate_accuracy.py
+```
+
+### Chạy script (trong venv)
+
+```bash
+cd ai-service
+
+# Windows (venv tên .venv)
+.venv\Scripts\python evaluate_accuracy.py
+
+# Mặc định: K = [1, 3, 5, 8], threshold từ .env
+.venv\Scripts\python evaluate_accuracy.py
+
+# Tuỳ chỉnh K và threshold
+.venv\Scripts\python evaluate_accuracy.py --top-k 1 3 5 10 --vs-threshold 0.55 --rec-threshold 0.35
+```
+
+> **Yêu cầu trước khi chạy:** Đã chạy `php artisan embeddings:generate` để có dữ liệu
+> trong bảng `product_embeddings`. Script đọc `.env` từ thư mục gốc tự động.
+
+### Metrics được tính
+
+| Metric | Tính năng | Ý nghĩa |
+|---|---|---|
+| **Category-Precision@K** | Visual Search | % kết quả top-K cùng danh mục với query |
+| **Coverage** | Visual Search | % sản phẩm có ≥1 kết quả trên threshold |
+| **Category-Precision@K** | Recommendations (Similar) | Sau khi áp threshold + diversity (giống production) |
+| **Hit Rate@K** | Recommendations (Personal) | % user tìm thấy sản phẩm mua gần nhất trong top-K |
+| **MRR** | Recommendations (Personal) | Mean Reciprocal Rank — đo vị trí trung bình |
+
+### Đọc kết quả
+
+**Visual Search — Category-Precision@K**
+- Dùng embedding đã lưu làm proxy query (offline protocol chuẩn).
+- `Precision@1 = 80%` → 80% sản phẩm tìm thấy được, kết quả giống nhất cũng cùng danh mục.
+- Baseline ngẫu nhiên ≈ `1 / số_danh_mục` (ví dụ 10 danh mục → 10%).
+
+**Recommendations — Hit Rate@K (Leave-One-Out)**
+- Với mỗi user có ≥2 đơn hàng: giữ sản phẩm mua gần nhất làm "test item",
+  xây taste profile từ lịch sử còn lại, kiểm tra test item có trong top-K không.
+- `Hit Rate@5 = 40%` → 40% user tìm thấy sản phẩm cần gợi ý trong top 5 kết quả.
+- `MRR = 20%` → trung bình test item nằm ở vị trí thứ 5 (`1/0.20 ≈ 5`).
+
+### Cải thiện khi kết quả thấp
+
+| Triệu chứng | Nguyên nhân có thể | Gợi ý |
+|---|---|---|
+| Coverage thấp (<50%) | Threshold quá cao | Giảm `VISUAL_SEARCH_THRESHOLD` trong `.env` |
+| Precision thấp nhưng coverage cao | Embedding chất lượng thấp | Thử `CLIP_MODEL=ViT-L-14` |
+| Hit Rate Personal thấp | Ít dữ liệu lịch sử | Cần thêm đơn hàng thực tế; threshold OK |
+| Precision@1 cao nhưng @5 thấp | Diversity quá mạnh | Tăng `--max-per-cat` lên 3 |
+
+---
+
 ## Checklist trước khi commit
 
 Trước khi tạo Pull Request, đảm bảo:
@@ -966,4 +1033,4 @@ Trước khi tạo Pull Request, đảm bảo:
 
 ---
 
-*Cập nhật lần cuối: 2026-03-07*
+*Cập nhật lần cuối: 2026-03-14*

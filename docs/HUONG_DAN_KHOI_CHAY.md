@@ -88,9 +88,11 @@ php artisan migrate --seed
 ```
 
 Lệnh này sẽ tạo toàn bộ 16 bảng ứng dụng và chèn dữ liệu mẫu bao gồm:
-- 1 tài khoản admin và 1 tài khoản khách hàng
+- 1 tài khoản admin và 1 tài khoản khách hàng (`customer@smartshop.local`)
+- 4 tài khoản khách hàng demo với lịch sử mua hàng (`alice`, `bob`, `carol`, `dave` @smartshop.local)
 - 9 danh mục (6 danh mục chính: Thời trang, Điện tử, Gia dụng, Sách, Thể thao, Làm đẹp + 3 danh mục con của Điện tử: Điện thoại, Laptop, Tai nghe)
 - 16 sản phẩm mẫu trải đều 6 danh mục chính
+- 14 đơn hàng mẫu (dùng để kiểm thử tính năng gợi ý cá nhân hóa AI)
 - 3 banner trang chủ
 - 2 phương thức thanh toán: COD và VNPay (sandbox)
 - 4 đơn vị vận chuyển: SPX Express, Viettel Post, Vietnam Post, J&T Express
@@ -173,6 +175,12 @@ dựa trên nội dung thực của ảnh sau bước này.
 |---|---|---|
 | Admin | admin@smartshop.local | password |
 | Khách hàng | customer@smartshop.local | password |
+| Demo (AI test) | alice@smartshop.local | password |
+| Demo (AI test) | bob@smartshop.local | password |
+| Demo (AI test) | carol@smartshop.local | password |
+| Demo (AI test) | dave@smartshop.local | password |
+
+> Các tài khoản demo (alice, bob, carol, dave) có lịch sử mua hàng thiết kế sẵn để kiểm thử tính năng gợi ý cá nhân hóa AI (Leave-One-Out evaluation).
 
 ---
 

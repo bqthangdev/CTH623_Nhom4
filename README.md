@@ -64,7 +64,7 @@ smartshop/
 │   │       ├── Auth/           # LoginRequest
 │   │       └── Shop/           # 6 Form Requests cho shop
 │   ├── Models/                 # 16 Eloquent models
-│   ├── Repositories/           # ProductRepository, OrderRepository
+│   ├── Repositories/           # ProductRepository, OrderRepository, ShippingCarrierRepository
 │   ├── Services/               # 10 Service classes:
 │   │                           #   CartService, CategoryService, DashboardService,
 │   │                           #   OrderService, ProductService, RecommendationService,
@@ -80,8 +80,9 @@ smartshop/
 ├── database/
 │   ├── factories/              # 1 Factory per model
 │   ├── migrations/             # 10 migration files → 16 bảng ứng dụng
-│   └── seeders/                # 7 seeders (User, Category, Product, Banner,
-│                               #            PaymentMethod, ShippingCarrier, DatabaseSeeder)
+│   └── seeders/                # 8 seeders (User, Category, Product, Banner,
+│                               #            PaymentMethod, ShippingCarrier,
+│                               #            Order, DatabaseSeeder)
 ├── docs/
 │   ├── AI_FEATURES.md          # Tài liệu tính năng AI (CLIP, visual search, recommendations)
 │   ├── CODING_STANDARDS.md     # Quy tắc lập trình dự án
@@ -146,6 +147,12 @@ php artisan embeddings:generate
 |---|---|---|
 | Admin | admin@smartshop.local | password |
 | Khách hàng | customer@smartshop.local | password |
+| Demo (AI test) | alice@smartshop.local | password |
+| Demo (AI test) | bob@smartshop.local | password |
+| Demo (AI test) | carol@smartshop.local | password |
+| Demo (AI test) | dave@smartshop.local | password |
+
+> Các tài khoản demo có lịch sử mua hàng thiết kế sẵn để kiểm thử tính năng gợi ý cá nhân hóa AI.
 
 ### URL truy cập
 
@@ -171,7 +178,7 @@ php artisan embeddings:generate
 | Thanh toán | `payment_methods` |
 | Vận chuyển | `shipping_carriers` |
 
-> Ngoài ra còn có các bảng hệ thống Laravel: `users` (sessions), `cache`, `cache_locks`, `jobs`, `job_batches`, `failed_jobs`, `password_reset_tokens`.
+> Ngoài ra còn có các bảng hệ thống Laravel: `sessions`, `cache`, `cache_locks`, `jobs`, `job_batches`, `failed_jobs`, `password_reset_tokens`.
 
 ---
 

@@ -289,26 +289,73 @@ Người dùng đã đăng nhập truy cập trang chủ
 
 ### Thuật toán
 
-**Similar products:** cosine similarity giữa embedding của `product_id` và tất cả sản
-phẩm còn lại trong cache in-memory.
+**Similar products:**
+1. Tính cosine similarity giữa embedding CLIP của `product_id` và tất cả sản phẩm còn lại.
+2. Lọc bỏ kết quả có score < `RECOMMENDATION_THRESHOLD` (mặc định **0.40**).
+3. Áp dụng **category diversity** — tối đa `MAX_PER_CATEGORY` (mặc định **2**) sản phẩm
+   mỗi danh mục để tránh kết quả đơn điệu.
+4. Trả về top-`limit` sau khi đa dạng hóa.
 
-**Personalized:** truy vấn `order_items` để lấy danh sách sản phẩm đã mua → tính
-vector trung bình (taste profile) → cosine similarity với tất cả sản phẩm chưa mua
-→ top-K.
+**Personalized:**
+1. Truy vấn `order_items JOIN orders` để lấy lịch sử mua kèm ngày đặt hàng.
+2. Xây dựng **recency-weighted taste profile**: mỗi embedding sản phẩm đã mua được nhân
+   với trọng số `exp(-days_old / 30)` — sản phẩm mua gần đây đóng góp nhiều hơn.
+3. Chuẩn hoá L2 vector trung bình có trọng số.
+4. Tính cosine similarity với tất cả sản phẩm chưa mua → lọc theo threshold → đa dạng hóa.
+
+**Xử lý sparse history (cold-start):** Khi người dùng có ít hơn 3 sản phẩm đã mua
+có embedding, taste profile không đủ đáng tin cậy. Hệ thống tự động **pha trộn**
+cosine similarity với tín hiệu **phổ biến toàn site** (`popularity blending`):
+
+| Số sản phẩm đã mua | Trọng số similarity | Trọng số popularity |
+|---|---|---|
+| 1 | 70% | 30% |
+| 2 | 85% | 15% |
+| ≥ 3 | 100% | 0% |
+
+Threshold vẫn áp dụng trên **cosine similarity thuần** (không phải điểm blended)
+để đảm bảo ngưỡng chất lượng ngữ nghĩa tối thiểu.
 
 **Lưu ý:** Laravel giữ nguyên thứ tự mà AI trả về khi map sang Eloquent Collection:
 
 ```php
 // RecommendationService::fetchOrdered()
-$products = $this->productRepository->getByIds($ids)->keyBy('id');
-return collect($ids)->map(fn ($id) => $products[$id] ?? null)->filter()->values();
+$idOrder  = array_flip($ids);
+return $this->productRepository->getByIds($ids)
+    ->sortBy(fn (Product $product) => $idOrder[$product->id] ?? PHP_INT_MAX)
+    ->values();
+```
+
+### Encoding kết quả
+
+Cả hai endpoint trả về trường `embedding_method` (giống Visual Search) để theo dõi
+encoder đang hoạt động:
+
+```json
+{
+    "recommended_products": [
+        { "id": 7, "score": 0.8921 },
+        { "id": 2, "score": 0.8530 }
+    ],
+    "embedding_method": "CLIP ViT-B-32 (512-dim)"
+}
 ```
 
 ### Fallback
 
-- **Similar products:** fallback về `getSameCategoryExcept()` (cùng danh mục, random).
-- **Personalized:** fallback về `getFeatured()` (sản phẩm nổi bật). Nếu AI không có
-  embedding nào trong cache, trả về danh sách rỗng → Laravel fallback tự động.
+- **Similar products:** fallback về `getSameCategoryExcept()` (cùng danh mục, random)
+  khi AI trả lỗi hoặc danh sách rỗng (tất cả sản phẩm dưới ngưỡng threshold).
+- **Personalized:** fallback về `getFeatured()` (sản phẩm nổi bật) khi AI lỗi,
+  người dùng chưa có lịch sử mua, hoặc không đủ sản phẩm vượt ngưỡng.
+
+#### Điều chỉnh ngưỡng và diversity
+
+Thêm vào file `.env` của AI Service:
+
+```env
+RECOMMENDATION_THRESHOLD=0.40  # Giảm (0.30) để có nhiều kết quả hơn,
+                                 # Tăng (0.55) để chỉ lấy kết quả rất tương tự
+```
 
 ---
 
@@ -333,9 +380,9 @@ Cấu hình trong `config/services.php`, đọc từ `.env`:
 
 ---
 
-## 5. Nâng cấp độ chính xác
+## 5. Nâng cấp độ chính xác thêm
 
-Phần này mô tả những cải tiến có thể thực hiện để nâng cao chất lượng tìm kiếm.
+Phần này mô tả những cải tiến có thể thực hiện để tiếp tục nâng cao chất lượng.
 
 ### Visual Search
 
@@ -351,9 +398,13 @@ CLIP ViT-B/32 hoạt động tốt với hầu hết loại sản phẩm. Để 
 
 ### Recommendations
 
-Thay phần shuffle demo bằng một trong hai phương pháp nâng cao hơn:
-
-- **Embedding similarity:** đã triển khai. Có thể nâng độ chính xác bằng cách dùng
-  CLIP ViT-L/14 thay ViT-B/32 — xem mục Visual Search.
-- **Collaborative filtering chuyên sâu:** dùng matrix factorization (SVD, ALS) trên
-  toàn bộ `order_items` để nắm bắt pattern "người mua X cũng mua Y" ở quy mô lớn hơn.
+- **Đã triển khai:**
+  - Score threshold (`RECOMMENDATION_THRESHOLD`) — loại bỏ sản phẩm không đủ tương đồng.
+  - Recency-weighted taste profile — mua gần đây ảnh hưởng nhiều hơn.
+  - Category diversity — tối đa 2 sản phẩm/danh mục.
+  - **Popularity blending** — giảm cold-start khi người dùng có ít lịch sử mua.
+- **Cải tiến tiếp theo:**
+  - **CLIP ViT-L/14:** cùng cấu hình như Visual Search — phần chất lượng embedding
+    cải thiện tự động cho cả hai tính năng.
+  - **Collaborative filtering chuyên sâu:** dùng matrix factorization (SVD, ALS) trên
+    toàn bộ `order_items` để nắm bắt pattern "người mua X cũng mua Y" ở quy mô lớn.

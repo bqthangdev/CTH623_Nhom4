@@ -99,15 +99,45 @@
                 @endauth
 
                 @auth
-                <form method="POST" action="{{ route('shop.wishlist.toggle') }}">
-                    @csrf
-                    <input type="hidden" name="product_id" value="{{ $product->id }}">
-                    <button type="submit" class="p-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                <div x-data="{ inWishlist: {{ $inWishlist ? 'true' : 'false' }} }">
+                    <button type="button"
+                        @click="
+                            fetch('{{ route('shop.wishlist.toggle') }}', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
+                                },
+                                body: JSON.stringify({ product_id: {{ $product->id }} })
+                            })
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.success) {
+                                    inWishlist = data.in_wishlist;
+                                    message = data.message;
+                                    messageType = 'success';
+                                    setTimeout(() => message = '', 3000);
+                                }
+                            })
+                            .catch(() => {
+                                message = 'Không thể kết nối. Vui lòng thử lại.';
+                                messageType = 'error';
+                                setTimeout(() => message = '', 3000);
+                            })
+                        "
+                        class="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                        :title="inWishlist ? 'Xóa khỏi yêu thích' : 'Thêm vào yêu thích'">
+                        <svg class="w-5 h-5 transition-colors"
+                             :class="inWishlist ? 'text-red-500' : 'text-gray-400'"
+                             :fill="inWishlist ? 'currentColor' : 'none'"
+                             stroke="currentColor"
+                             viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                         </svg>
                     </button>
-                </form>
+                </div>
                 @endauth
             </div>
 

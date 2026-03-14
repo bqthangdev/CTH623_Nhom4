@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Repositories\ProductRepository;
 use App\Services\ProductService;
 use App\Services\RecommendationService;
+use App\Services\WishlistService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -17,6 +18,7 @@ class ProductController extends Controller
         private readonly ProductRepository $productRepository,
         private readonly ProductService $productService,
         private readonly RecommendationService $recommendationService,
+        private readonly WishlistService $wishlistService,
     ) {}
 
     public function index(Request $request): View
@@ -36,7 +38,10 @@ class ProductController extends Controller
         $this->productService->recordView($product, $request->user()?->getAuthIdentifier());
 
         $recommendations = $this->recommendationService->getForProduct($product);
+        $inWishlist      = $request->user()
+            ? $this->wishlistService->isWishlisted($request->user()->id, $product->id)
+            : false;
 
-        return view('shop.products.show', compact('product', 'recommendations'));
+        return view('shop.products.show', compact('product', 'recommendations', 'inWishlist'));
     }
 }

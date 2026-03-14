@@ -72,9 +72,18 @@ class RecommendationService
             throw new \RuntimeException('AI service returned empty list.');
         }
 
-        // Preserve the ranking order returned by the AI service
-        $products = $this->productRepository->getByIds($ids)->keyBy('id');
+        Log::info('AI recommendations success.', [
+            'path'             => $path,
+            'params'           => $params,
+            'count'            => count($ids),
+            'embedding_method' => $response->json('embedding_method', 'unknown'),
+        ]);
 
-        return collect($ids)->map(fn ($id) => $products[$id] ?? null)->filter()->values();
+        // Preserve the ranking order returned by the AI service
+        $idOrder = array_flip($ids);
+
+        return $this->productRepository->getByIds($ids)
+            ->sortBy(fn (Product $product) => $idOrder[$product->id] ?? PHP_INT_MAX)
+            ->values();
     }
 }
