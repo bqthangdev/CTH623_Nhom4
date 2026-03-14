@@ -27,6 +27,8 @@ class OrderController extends Controller
         $order = $this->orderRepository->findForUser($order, auth()->id());
         abort_if(! $order, 404);
 
+        $order->load(['items.product', 'voucher', 'shippingCarrier']);
+
         return view('shop.orders.show', compact('order'));
     }
 

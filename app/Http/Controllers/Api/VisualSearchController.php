@@ -17,11 +17,12 @@ class VisualSearchController extends Controller
             'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ]);
 
-        $products = $this->visualSearchService->search($request->file('image'));
+        $searchResult = $this->visualSearchService->search($request->file('image'));
 
         return response()->json([
-            'success' => true,
-            'data'    => $products,
+            'success'         => true,
+            'data'            => $searchResult->products,
+            'detected_object' => $searchResult->detectedObject,
         ]);
     }
 }

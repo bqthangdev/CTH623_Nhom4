@@ -29,18 +29,41 @@ class GenerateProductEmbeddings extends Command
         $failed = 0;
 
         foreach ($products as $product) {
-            $image = $product->images->sortByDesc('is_primary')->first();
-            $path  = Storage::disk('public')->path($image->image_path);
+            $vectors = [];
 
-            if (! file_exists($path)) {
+            // Compute a separate embedding for every product image.
+            foreach ($product->images as $image) {
+                $path = Storage::disk('public')->path($image->image_path);
+
+                if (! file_exists($path)) {
+                    continue;
+                }
+
+                $response = Http::timeout(30)
+                    ->attach('image', file_get_contents($path), basename($path))
+                    ->post("{$aiUrl}/api/embeddings/compute");
+
+                if ($response->successful()) {
+                    $vectors[] = $response->json('embedding');
+                }
+            }
+
+            if (empty($vectors)) {
                 $failed++;
                 $bar->advance();
                 continue;
             }
 
+            // Average all per-image vectors and L2-normalise. Storing the mean
+            // vector ensures the product embedding represents all its photos,
+            // so a search using any of the product's images yields a high score.
+            $averaged = $this->averageEmbeddings($vectors);
+
             $response = Http::timeout(30)
-                ->attach('image', file_get_contents($path), basename($path))
-                ->post("{$aiUrl}/api/embeddings/generate?product_id={$product->id}");
+                ->post("{$aiUrl}/api/embeddings/store", [
+                    'product_id' => $product->id,
+                    'embedding'  => $averaged,
+                ]);
 
             if ($response->failed()) {
                 $failed++;
@@ -56,5 +79,33 @@ class GenerateProductEmbeddings extends Command
         $this->info("Done. {$succeeded} embeddings generated, {$failed} failed.");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Average an array of embedding vectors and return the L2-normalised result.
+     *
+     * @param  array<int, array<int, float>>  $vectors
+     * @return array<int, float>
+     */
+    private function averageEmbeddings(array $vectors): array
+    {
+        $dim = count($vectors[0]);
+        $avg = array_fill(0, $dim, 0.0);
+
+        foreach ($vectors as $vec) {
+            foreach ($vec as $i => $val) {
+                $avg[$i] += (float) $val;
+            }
+        }
+
+        $count = count($vectors);
+        $avg   = array_map(fn ($v) => $v / $count, $avg);
+
+        // L2 normalize
+        $norm = sqrt(array_sum(array_map(fn ($v) => $v ** 2, $avg)));
+
+        return $norm > 0
+            ? array_map(fn ($v) => $v / $norm, $avg)
+            : $avg;
     }
 }

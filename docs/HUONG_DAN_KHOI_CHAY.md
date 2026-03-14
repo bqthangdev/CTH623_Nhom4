@@ -87,11 +87,13 @@ mysql -u root -p -e "CREATE DATABASE smartshop CHARACTER SET utf8mb4 COLLATE utf
 php artisan migrate --seed
 ```
 
-Lệnh này sẽ tạo toàn bộ 14 bảng ứng dụng và chèn dữ liệu mẫu bao gồm:
+Lệnh này sẽ tạo toàn bộ 16 bảng ứng dụng và chèn dữ liệu mẫu bao gồm:
 - 1 tài khoản admin và 1 tài khoản khách hàng
 - 9 danh mục (6 danh mục chính: Thời trang, Điện tử, Gia dụng, Sách, Thể thao, Làm đẹp + 3 danh mục con của Điện tử: Điện thoại, Laptop, Tai nghe)
 - 16 sản phẩm mẫu trải đều 6 danh mục chính
 - 3 banner trang chủ
+- 2 phương thức thanh toán: COD và VNPay (sandbox)
+- 4 đơn vị vận chuyển: SPX Express, Viettel Post, Vietnam Post, J&T Express
 
 ---
 

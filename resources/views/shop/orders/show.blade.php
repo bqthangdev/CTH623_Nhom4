@@ -29,6 +29,12 @@
             <p class="text-sm text-gray-700">{{ $order->recipient_name }}</p>
             <p class="text-sm text-gray-700">{{ $order->phone }}</p>
             <p class="text-sm text-gray-700">{{ $order->shipping_address }}</p>
+            @if($order->shippingCarrier)
+            <div class="mt-3 p-3 bg-blue-50 rounded-lg text-sm space-y-1">
+                <p class="text-gray-600">Đơn vị vận chuyển: <span class="font-medium text-gray-800">{{ $order->shippingCarrier->name }}</span></p>
+                <p class="text-gray-600">Mã vận đơn: <span class="font-mono font-medium text-gray-800">{{ $order->tracking_code }}</span></p>
+            </div>
+            @endif
         </div>
 
         {{-- Items --}}
@@ -73,6 +79,10 @@
                 <span>-{{ number_format($order->discount_amount) }}đ</span>
             </div>
             @endif
+            <div class="flex justify-between text-gray-600">
+                <span>Phí vận chuyển</span>
+                <span>{{ number_format($order->shipping_fee) }}đ</span>
+            </div>
             <div class="flex justify-between font-bold text-base border-t pt-2">
                 <span>Tổng cộng</span>
                 <span class="text-indigo-600">{{ number_format($order->final_amount) }}đ</span>

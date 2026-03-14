@@ -44,8 +44,8 @@
                     {{ $product->stock }}
                 </td>
                 <td class="px-4 py-3 text-center">
-                    <span class="px-2 py-0.5 rounded-full text-xs {{ $product->is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500' }}">
-                        {{ $product->is_active ? 'Hiển thị' : 'Ẩn' }}
+                    <span class="px-2 py-0.5 rounded-full text-xs {{ $product->status ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500' }}">
+                        {{ $product->status ? 'Hiển thị' : 'Ẩn' }}
                     </span>
                 </td>
                 <td class="px-4 py-3 text-right">

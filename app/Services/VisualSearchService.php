@@ -15,22 +15,47 @@ class VisualSearchService
         private readonly ProductRepository $productRepository,
     ) {}
 
-    public function search(UploadedFile $image): Collection
+    /**
+     * Search for products visually similar to the uploaded image.
+     *
+     * @return object{products: Collection, detectedObject: string|null, embeddingMethod: string|null}
+     */
+    public function search(UploadedFile $image): object
     {
+        Log::info('[VisualSearch] Request received.', [
+            'file'    => $image->getClientOriginalName(),
+            'size'    => $image->getSize(),
+            'mime'    => $image->getMimeType(),
+        ]);
+
         try {
-            return $this->searchViaAiService($image);
+            $result = $this->searchViaAiService($image);
+
+            Log::info('[VisualSearch] Search completed.', [
+                'embedding_method' => $result->embeddingMethod,
+                'detected_object'  => $result->detectedObject,
+                'result_count'     => $result->products->count(),
+            ]);
+
+            return $result;
         } catch (\Exception $e) {
-            Log::warning('Visual search failed, using fallback.', [
+            Log::warning('[VisualSearch] Failed, falling back to featured products.', [
                 'error' => $e->getMessage(),
             ]);
 
-            // Fallback: trả về sản phẩm nổi bật
-            return $this->productRepository->getFeatured(10);
+            return (object) [
+                'products'       => $this->productRepository->getFeatured(10),
+                'detectedObject' => null,
+            ];
         }
     }
 
-    private function searchViaAiService(UploadedFile $image): Collection
+    private function searchViaAiService(UploadedFile $image): object
     {
+        Log::info('[VisualSearch] Calling AI service.', [
+            'url' => config('services.ai.url') . '/api/visual-search',
+        ]);
+
         $response = Http::timeout(config('services.ai.timeout', 30))
             ->attach('image', $image->getContent(), $image->getClientOriginalName())
             ->post(config('services.ai.url') . '/api/visual-search');
@@ -45,6 +70,10 @@ class VisualSearchService
             throw new \RuntimeException('AI service returned no matching products.');
         }
 
-        return $this->productRepository->getByIds($ids);
+        return (object) [
+            'products'        => $this->productRepository->getByIds($ids),
+            'detectedObject'  => $response->json('detected_object'),
+            'embeddingMethod' => $response->json('embedding_method'),
+        ];
     }
 }

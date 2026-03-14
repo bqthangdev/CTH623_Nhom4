@@ -67,7 +67,9 @@ Route::prefix('admin')
         Route::resource('banners', Admin\BannerController::class);
         Route::resource('vouchers', Admin\VoucherController::class);
         Route::resource('payment-methods', Admin\PaymentMethodController::class);
+        Route::resource('shipping-carriers', Admin\ShippingCarrierController::class);
+        Route::patch('orders/{order}/shipping', [Admin\OrderController::class, 'updateShipping'])
+            ->name('orders.update-shipping');
     });
 
 require __DIR__.'/auth.php';
-

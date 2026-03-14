@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Database\Seeders\PaymentMethodSeeder;
+use Database\Seeders\ShippingCarrierSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -22,6 +23,7 @@ class DatabaseSeeder extends Seeder
             ProductSeeder::class,
             BannerSeeder::class,
             PaymentMethodSeeder::class,
+            ShippingCarrierSeeder::class,
         ]);
     }
 }

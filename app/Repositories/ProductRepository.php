@@ -53,6 +53,7 @@ class ProductRepository
     {
         return Product::with('primaryImage')
             ->whereIn('id', $ids)
+            ->whereHas('images')
             ->active()
             ->get();
     }

@@ -25,22 +25,51 @@
                        ($order->status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700') }}">
                     {{ $order->status_label }}
                 </span>
-                @if(!empty($transitions))
-                <form method="POST" action="{{ route('admin.orders.update', $order->id) }}" class="flex items-center gap-2">
-                    @csrf @method('PUT')
-                    <select name="status" class="border border-gray-300 rounded-lg pl-3 pr-8 py-1.5 text-sm min-w-36 appearance-auto">
-                        @foreach($transitions as $val)
-                        <option value="{{ $val }}">{{ $statusLabels[$val] }}</option>
-                        @endforeach
-                    </select>
-                    <button type="submit" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-indigo-700 transition">
-                        Cập nhật
-                    </button>
-                </form>
+                @if($order->status === 'confirmed')
+                    {{-- Dispatch to shipping: requires carrier + tracking code --}}
+                    <form method="POST" action="{{ route('admin.orders.update-shipping', $order->id) }}" class="flex items-center gap-2 flex-wrap">
+                        @csrf @method('PATCH')
+                        <select name="shipping_carrier_id" required
+                            class="border @error('shipping_carrier_id') border-red-400 @else border-gray-300 @enderror rounded-lg pl-3 pr-8 py-1.5 text-sm min-w-40 appearance-auto">
+                            <option value="">-- Đơn vị vận chuyển --</option>
+                            @foreach($carriers as $carrier)
+                            <option value="{{ $carrier->id }}" {{ old('shipping_carrier_id') == $carrier->id ? 'selected' : '' }}>
+                                {{ $carrier->name }}
+                            </option>
+                            @endforeach
+                        </select>
+                        <input type="text" name="tracking_code" value="{{ old('tracking_code') }}"
+                            placeholder="Mã vận đơn" required maxlength="100"
+                            class="border @error('tracking_code') border-red-400 @else border-gray-300 @enderror rounded-lg px-3 py-1.5 text-sm w-40">
+                        <button type="submit" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-indigo-700 transition">
+                            Giao hàng
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ route('admin.orders.update', $order->id) }}" class="inline">
+                        @csrf @method('PUT')
+                        <input type="hidden" name="status" value="cancelled">
+                        <button type="submit" onclick="return confirm('Xác nhận hủy đơn hàng này?')"
+                            class="px-3 py-1.5 rounded-lg text-sm border border-red-500 text-red-500 hover:bg-red-50 transition">
+                            Hủy đơn
+                        </button>
+                    </form>
+                @elseif(!empty($transitions))
+                    {{-- Other statuses with transitions (e.g. pending → confirmed/cancelled) --}}
+                    <form method="POST" action="{{ route('admin.orders.update', $order->id) }}" class="flex items-center gap-2">
+                        @csrf @method('PUT')
+                        <select name="status" class="border border-gray-300 rounded-lg pl-3 pr-8 py-1.5 text-sm min-w-36 appearance-auto">
+                            @foreach($transitions as $val)
+                            <option value="{{ $val }}">{{ $statusLabels[$val] }}</option>
+                            @endforeach
+                        </select>
+                        <button type="submit" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-indigo-700 transition">
+                            Cập nhật
+                        </button>
+                    </form>
                 @elseif($order->status === 'shipping')
-                <span class="text-sm text-gray-500 italic">Chờ khách hàng xác nhận đã nhận hàng</span>
+                    <span class="text-sm text-gray-500 italic">Chờ khách hàng xác nhận đã nhận hàng</span>
                 @else
-                <span class="text-sm text-gray-500 italic">Đã kết thúc</span>
+                    <span class="text-sm text-gray-500 italic">Đã kết thúc</span>
                 @endif
             </div>
         </div>
@@ -54,6 +83,10 @@
             <div class="col-span-2"><span class="text-gray-500">Địa chỉ</span><p>{{ $order->shipping_address }}</p></div>
             @if($order->note)
             <div class="col-span-2"><span class="text-gray-500">Ghi chú</span><p>{{ $order->note }}</p></div>
+            @endif
+            @if($order->shippingCarrier)
+            <div><span class="text-gray-500">Đơn vị vận chuyển</span><p class="font-medium">{{ $order->shippingCarrier->name }}</p></div>
+            <div><span class="text-gray-500">Mã vận đơn</span><p class="font-mono font-medium">{{ $order->tracking_code }}</p></div>
             @endif
         </div>
 
@@ -94,6 +127,7 @@
                 <span>-{{ number_format($order->discount_amount) }}đ</span>
             </div>
             @endif
+            <div class="flex justify-between"><span class="text-gray-600">Phí vận chuyển</span><span>{{ number_format($order->shipping_fee) }}đ</span></div>
             <div class="flex justify-between font-bold text-base border-t pt-2">
                 <span>Tổng cộng</span>
                 <span class="text-indigo-600">{{ number_format($order->final_amount) }}đ</span>

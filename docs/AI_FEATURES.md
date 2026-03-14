@@ -28,6 +28,8 @@ Laravel App (port 8000)
         ▼
 AI Service – FastAPI (port 8001)
    ├── POST /api/visual-search
+   ├── POST /api/embeddings/compute
+   ├── POST /api/embeddings/store
    ├── POST /api/embeddings/generate
    ├── GET  /api/recommendations/similar
    └── GET  /api/recommendations/personal
@@ -86,7 +88,7 @@ Người dùng upload ảnh
 |---|---|---|
 | `GET` | `/visual-search` | Hiển thị trang tìm kiếm (form upload) |
 | `POST` | `/visual-search` | Xử lý ảnh, trả về kết quả (Web form) |
-| `POST` | `/api/v1/visual-search` | Endpoint JSON cho AJAX (yêu cầu auth, throttle 10/min) |
+| `POST` | `/api/visual-search` | Endpoint JSON cho AJAX (yêu cầu Sanctum auth, throttle 20/phút) |
 
 ### AI Service endpoints
 
@@ -99,38 +101,90 @@ Người dùng upload ảnh
         { "id": 5,  "similarity_score": 0.9821 },
         { "id": 12, "similarity_score": 0.9643 },
         { "id": 3,  "similarity_score": 0.9105 }
-    ]
+    ],
+    "detected_object": "Điện thoại",
+    "embedding_method": "CLIP ViT-B-32 (512-dim)"
 }
 ```
 
-Danh sách trả về tối đa **10 sản phẩm**, sắp xếp theo `similarity_score` giảm dần.
-Nếu chưa có embedding nào trong DB, trả về danh sách rỗng và Laravel fallback về
-sản phẩm nổi bật.
+Danh sách trả về tối đa **10 sản phẩm**, sắp xếp theo `similarity_score` giảm dần,
+và **chỉ bao gồm sản phẩm đạt ngưỡng tương đồng tối thiểu** (`VISUAL_SEARCH_THRESHOLD`,
+mặc định **0.60** với CLIP, **0.55** với histogram fallback). Nếu không có sản phẩm nào vượt ngưỡng — hoặc chưa có embedding trong DB
+— endpoint trả về danh sách rỗng và Laravel fallback về sản phẩm nổi bật.
+
+**`POST /api/embeddings/compute`** — nhận `multipart/form-data` với field `image`.
+Tính và trả về vector embedding (dạng JSON) mà **không lưu vào DB**.
+Sử dụng kết hợp với `/store` để tập hợp embedding từ nhiều ảnh trước khi tính trung bình.
+
+**`POST /api/embeddings/store`** — nhận JSON `{product_id, embedding: [...]}`.  
+Lưu vector embedding đã tính sẵn vào DB và cập nhật cache in-memory.
 
 **`POST /api/embeddings/generate?product_id={id}`** — nhận `multipart/form-data` với
-field `image`. Tính embedding cho ảnh sản phẩm và lưu vào DB, sau đó cập nhật
-cache in-memory. Được gọi bởi `php artisan embeddings:generate`.
+field `image`. Tính embedding cho một ảnh và lưu trực tiếp (legacy). Vẫn hoạt động
+nhưng khướng nghị dùng luồng compute → average → store cho sản phẩm nhiều ảnh.
 
 ### Thuật toán embedding
 
-Vector đặc trưng là **color histogram chuẩn hoá L2** (192 chiều):
-- Ảnh được resize về 224×224 pixel và chuyển sang RGB.
-- Tính histogram 64 bins cho mỗi trong 3 kênh màu (R, G, B).
-- Ghép 3 histogram thành vector 192 chiều, chuẩn hoá theo L2-norm.
+Vector đặc trưng là **CLIP image embedding chuẩn hoá L2** (512 chiều):
+
+| Thành phần | Model | Chiều |
+|---|---|---|
+| CLIP ViT-B/32 image encoder | `openai/ViT-B-32` | 512 |
+| Fallback: spatial color histogram | (không có GPU/torch) | 576 |
+
+- Ảnh được encode qua **CLIP ViT-B/32** — mô hình vision-language pre-trained trên
+  400 triệu cặp ảnh-văn bản từ internet. Embedding nắm bắt nội dung ngữ nghĩa
+  (hình dạng, loại đồ vật, ngữ cảnh) thay vì chỉ màu sắc pixel.
+- Nếu `open-clip-torch` / `torch` chưa được cài, service tự động fallback về
+  576-dim spatial color histogram (không cần thay đổi code).
 
 Độ tương đồng giữa ảnh truy vấn và từng sản phẩm được tính bằng **cosine similarity**
-trên ma trận embedding đã load vào bộ nhớ lúc khởi động.
+trên ma trận embedding đã load vào bộ nhớ lúc khởi động. Chỉ sản phẩm có score
+≥ `SIMILARITY_THRESHOLD` (mặc định **0.60** với CLIP) mới được đưa vào kết quả.
+
+### Nhận diện đồ vật (Zero-Shot Classification)
+
+Song song với tìm kiếm, service phân loại ảnh upload để trả về tên danh mục
+sản phẩm được nhận diện (`detected_object`) — hiển thị ngay trước kết quả tìm kiếm.
+
+**Luồng:**
+1. Khi khởi động, service đọc tất cả tên danh mục từ DB và encode chúng
+   thành vector 512-dim bằng CLIP **text encoder** (dùng prompt tiếng Anh mô tả
+   danh mục để đảm bảo CLIP hiểu đúng ngữ nghĩa).
+2. Khi search, tính **dot-product similarity** giữa embedding ảnh và tất cả
+   vector văn bản → **softmax** → tắt cả xác suất → danh mục tạt cao nhất.
+3. Nếu xác suất cao nhất vượt ngưỡng (tối thiểu 15%) thì trả về tên danh mục,
+   ngược lại trả về `null`.
+
+#### Điều chỉnh ngưỡng tương đồng
+
+Thêm vào file `.env` của AI Service:
+
+```env
+VISUAL_SEARCH_THRESHOLD=0.60   # Giảm xuống (0.50) để kết quả rộng hơn,
+                                # Tăng lên (0.75) để kết quả khắt khe hơn
+CLIP_MODEL=ViT-B-32             # Hoặc ViT-L-14 để chính xác hơn (chậm hơn)
+```
 
 ### Sinh embeddings cho sản phẩm
+
+> **Lưu ý:** Lần đầu chạy sau khi cài `open-clip-torch`, AI Service sẽ tự động tải
+> model CLIP ViT-B/32 (~350 MB) về cache của hệ thống. Cần kết nối internet.
 
 Sau khi chạy `php artisan migrate --seed` và khởi động AI Service, chạy:
 
 ```bash
+pip install -r ai-service/requirements.txt  # cài open-clip-torch nếu chưa có
 php artisan embeddings:generate
 ```
 
-Lệnh này đọc ảnh đầu tiên của từng sản phẩm từ storage, gọi endpoint
-`/api/embeddings/generate`, và lưu kết quả vào bảng `product_embeddings`.
+Lệnh này xử lý từng sản phẩm theo luồng:
+1. Gọi `/api/embeddings/compute` cho **mỗi ảnh** — trả về vector CLIP 512-dim.
+2. Tính **trung bình cộng** các vector (PHP), sau đó chuẩn hoá L2.
+3. Lưu vector trung bình vào DB qua `/api/embeddings/store`.
+
+Do embedding là trung bình tất cả ảnh của sản phẩm, tìm kiếm bằng bất kỳ ảnh nào của
+sản phẩm đều cho score cao — khắc phục trưỜng hợp sản phẩm có nhiều góc chụp khác nhau.
 
 ### Fallback
 
@@ -285,23 +339,21 @@ Phần này mô tả những cải tiến có thể thực hiện để nâng ca
 
 ### Visual Search
 
-Color histogram hoạt động tốt với sự tương đồng về màu sắc, nhưng bỏ qua hình dạng
-và ngữ nghĩa. Để cải thiện:
+CLIP ViT-B/32 hoạt động tốt với hầu hết loại sản phẩm. Để cải thiện thêm:
 
-- **Deep feature extractor:** thay `_extract_embedding()` bằng MobileNetV2 hoặc
-  EfficientNet từ `torchvision`. Vector đặc trưng từ penultimate layer (~1280 chiều)
-  nắm bắt được hình dạng và ngữ nghĩa sản phẩm.
-- **CLIP embeddings:** dùng `open-clip-torch` để có embedding đa phương thức
-  (ảnh + văn bản), hữu ích khi muốn tìm kiếm bằng cả ảnh lẫn từ khoá.
-
-Kiến trúc tổng thể (startup, cosine similarity, fallback) **không cần thay đổi** —
-chỉ cần thay hàm `_extract_embedding()` trong `visual_search.py`.
+- **CLIP ViT-L/14:** đặt `CLIP_MODEL=ViT-L-14` trong `.env` — vector 768-dim, chính
+  xác hơn nhưng tốc độ chậm hơn. Sau khi đổi model, chạy lại `php artisan
+  embeddings:generate` để tái tạo toàn bộ embedding.
+- **CLIP đa ngôn ngữ (mCLIP):** hữu ích nếu tên sản phẩm viết bằng tiếng Việt —
+  dùng `multilingual-clip` từ HuggingFace.
+- **Image + text search:** kết hợp CLIP image embedding (tìm theo ảnh) với CLIP
+  text embedding của tên sản phẩm (tìm theo từ khóa) trong cùng một vector space.
 
 ### Recommendations
 
 Thay phần shuffle demo bằng một trong hai phương pháp nâng cao hơn:
 
 - **Embedding similarity:** đã triển khai. Có thể nâng độ chính xác bằng cách dùng
-  deep feature extractor (MobileNetV2, CLIP) thay color histogram — xem mục Visual Search.
+  CLIP ViT-L/14 thay ViT-B/32 — xem mục Visual Search.
 - **Collaborative filtering chuyên sâu:** dùng matrix factorization (SVD, ALS) trên
   toàn bộ `order_items` để nắm bắt pattern "người mua X cũng mua Y" ở quy mô lớn hơn.

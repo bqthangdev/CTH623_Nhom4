@@ -83,9 +83,19 @@
             <span class="flex-shrink-0">{{ number_format($item->subtotal) }}đ</span>
         </div>
         @endforeach
-        <div class="border-t pt-3 mt-3 flex justify-between font-bold">
-            <span>Tổng cộng</span>
-            <span class="text-indigo-600">{{ number_format($subtotal) }}đ</span>
+        <div class="border-t pt-3 mt-3 space-y-1.5 text-sm">
+            <div class="flex justify-between text-gray-600">
+                <span>Tạm tính</span>
+                <span>{{ number_format($subtotal) }}đ</span>
+            </div>
+            <div class="flex justify-between text-gray-600">
+                <span>Phí vận chuyển</span>
+                <span>30.000đ</span>
+            </div>
+            <div class="flex justify-between font-bold text-base pt-1.5 border-t">
+                <span>Tổng cộng</span>
+                <span class="text-indigo-600">{{ number_format($subtotal + 30000) }}đ</span>
+            </div>
         </div>
     </div>
 

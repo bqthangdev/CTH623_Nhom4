@@ -31,6 +31,7 @@
                     ['route' => 'admin.banners.index',           'label' => 'Banner'],
                     ['route' => 'admin.vouchers.index',           'label' => 'Voucher'],
                     ['route' => 'admin.payment-methods.index',   'label' => 'Thanh toán'],
+                    ['route' => 'admin.shipping-carriers.index', 'label' => 'Vận chuyển'],
                 ];
             @endphp
             @foreach($navItems as $item)

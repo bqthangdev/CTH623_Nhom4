@@ -47,9 +47,27 @@
     </div>
 </div>
 
+@if(isset($detectedObject) && $detectedObject)
+<div class="mt-6 flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
+    <svg class="h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7
+                 -1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+    </svg>
+    <span>Nhận diện: <strong>{{ $detectedObject }}</strong></span>
+</div>
+@endif
+
 @if(isset($results) && $results->isNotEmpty())
 <div class="mt-8">
-    <h2 class="text-xl font-bold mb-4">Sản phẩm tương tự</h2>
+    <h2 class="text-xl font-bold mb-4">
+        Sản phẩm tương tự
+        @if(isset($detectedObject) && $detectedObject)
+            <span class="text-indigo-600">{{ $detectedObject }}</span>
+        @endif
+    </h2>
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         @foreach($results as $product)
         <x-product-card :product="$product" />
@@ -57,7 +75,13 @@
     </div>
 </div>
 @elseif(isset($results) && $results->isEmpty())
-<div class="mt-8 text-center text-gray-500">Không tìm thấy sản phẩm tương tự.</div>
+<div class="mt-8 text-center text-gray-500">
+    @if(isset($detectedObject) && $detectedObject)
+        Không tìm thấy sản phẩm <strong>{{ $detectedObject }}</strong> nào phù hợp.
+    @else
+        Không tìm thấy sản phẩm tương tự.
+    @endif
+</div>
 @endif
 
 @endsection

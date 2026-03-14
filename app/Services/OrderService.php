@@ -95,7 +95,30 @@ class OrderService
             ]);
         }
 
+        if ($newStatus === 'shipping') {
+            throw ValidationException::withMessages([
+                'status' => 'Chuyển sang trạng thái đang giao hàng cần chọn đơn vị vận chuyển và nhập mã vận đơn.',
+            ]);
+        }
+
         $order->update(['status' => $newStatus]);
+
+        return $order->fresh();
+    }
+
+    public function dispatchOrder(Order $order, int $carrierId, string $trackingCode): Order
+    {
+        if ($order->status !== 'confirmed') {
+            throw ValidationException::withMessages([
+                'status' => 'Chỉ có thể giao hàng với đơn đã xác nhận.',
+            ]);
+        }
+
+        $order->update([
+            'status'              => 'shipping',
+            'shipping_carrier_id' => $carrierId,
+            'tracking_code'       => $trackingCode,
+        ]);
 
         return $order->fresh();
     }
