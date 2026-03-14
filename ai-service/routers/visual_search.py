@@ -29,6 +29,10 @@ import json
 import os
 from typing import Optional
 
+# Suppress the HuggingFace Hub unauthenticated-request noise that open_clip
+# triggers during model loading.  "error" means only actual errors are logged.
+os.environ.setdefault("HF_HUB_VERBOSITY", "error")
+
 import numpy as np
 import pymysql
 from fastapi import APIRouter, File, UploadFile
@@ -95,7 +99,7 @@ def load_clip_model() -> None:
         return
     try:
         _clip_model, _, _clip_preprocess = open_clip.create_model_and_transforms(
-            CLIP_MODEL_NAME, pretrained="openai"
+            CLIP_MODEL_NAME, pretrained="openai", force_quick_gelu=True
         )
         _clip_model.eval()
         _clip_tokenizer = open_clip.get_tokenizer(CLIP_MODEL_NAME)
