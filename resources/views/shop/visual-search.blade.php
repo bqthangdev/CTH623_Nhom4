@@ -8,7 +8,7 @@
     <h1 class="text-2xl font-bold mb-2">Tìm kiếm bằng hình ảnh</h1>
     <p class="text-gray-500 text-sm mb-6">Tải lên ảnh sản phẩm để tìm các sản phẩm tương tự.</p>
 
-    <div x-data="{ preview: null, loading: false }" class="bg-white rounded-lg shadow p-6">
+    <div x-data="visualSearchUpload()" class="bg-white rounded-lg shadow p-6">
         <form method="POST" action="{{ route('shop.visual-search.search') }}"
             enctype="multipart/form-data"
             @submit="loading = true"
@@ -16,8 +16,12 @@
             @csrf
 
             <div
-                class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-indigo-400 transition"
-                @click="$refs.fileInput.click()">
+                class="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition"
+                :class="dragging ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300 hover:border-indigo-400'"
+                @click="$refs.fileInput.click()"
+                @dragover.prevent="dragging = true"
+                @dragleave.prevent="dragging = false"
+                @drop.prevent="handleDrop($event)">
                 <template x-if="!preview">
                     <div>
                         <svg class="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -85,3 +89,27 @@
 @endif
 
 @endsection
+
+@push('scripts')
+<script>
+function visualSearchUpload() {
+    return {
+        preview: null,
+        loading: false,
+        dragging: false,
+        handleDrop(event) {
+            this.dragging = false;
+            const file = event.dataTransfer.files[0];
+            if (!file) return;
+            const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+            if (!allowed.includes(file.type)) return;
+            this.preview = URL.createObjectURL(file);
+            // Assign dropped file to the hidden input so the form submits it correctly
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            this.$refs.fileInput.files = dt.files;
+        },
+    };
+}
+</script>
+@endpush
