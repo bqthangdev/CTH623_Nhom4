@@ -19,7 +19,13 @@ Route::get('/categories/{category:slug}', [Shop\CategoryController::class, 'show
 Route::get('/visual-search', [Shop\VisualSearchController::class, 'index'])->name('shop.visual-search');
 Route::post('/visual-search', [Shop\VisualSearchController::class, 'search'])->name('shop.visual-search.search');
 
+// Đổi mật khẩu (cần auth; không áp force.password.change để tránh vòng lặp redirect)
 Route::middleware('auth')->group(function () {
+    Route::get('/change-password', [Shop\ChangePasswordController::class, 'show'])->name('password.change');
+    Route::post('/change-password', [Shop\ChangePasswordController::class, 'store'])->name('password.change.store');
+});
+
+Route::middleware(['auth', 'force.password.change'])->group(function () {
     // Giỏ hàng
     Route::get('/cart', [Shop\CartController::class, 'index'])->name('shop.cart.index');
     Route::post('/cart', [Shop\CartController::class, 'store'])->name('shop.cart.store');
@@ -52,7 +58,7 @@ Route::middleware('auth')->group(function () {
 // ───────────────────────────────────────────────
 Route::prefix('admin')
     ->name('admin.')
-    ->middleware(['auth', 'role:admin'])
+    ->middleware(['auth', 'role:admin', 'force.password.change'])
     ->group(function () {
         Route::get('/', [Admin\DashboardController::class, 'index'])->name('dashboard');
 
@@ -64,6 +70,7 @@ Route::prefix('admin')
         Route::resource('orders', Admin\OrderController::class)->only(['index', 'show', 'update']);
         Route::resource('customers', Admin\CustomerController::class)->only(['index', 'show']);
         Route::post('customers/{customer}/toggle-active', [Admin\CustomerController::class, 'toggleActive'])->name('customers.toggle-active');
+        Route::post('customers/{customer}/reset-password', [Admin\CustomerController::class, 'resetPassword'])->name('customers.reset-password');
         Route::resource('banners', Admin\BannerController::class);
         Route::resource('vouchers', Admin\VoucherController::class);
         Route::resource('payment-methods', Admin\PaymentMethodController::class);

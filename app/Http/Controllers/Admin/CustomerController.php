@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class CustomerController extends Controller
@@ -42,5 +44,20 @@ class CustomerController extends Controller
         $status = $customer->is_active ? 'kích hoạt' : 'vô hiệu hóa';
 
         return back()->with('success', "Đã {$status} tài khoản khách hàng.");
+    }
+
+    public function resetPassword(User $customer): RedirectResponse
+    {
+        abort_if($customer->role !== 'customer', 404);
+
+        $temporaryPassword = Str::random(12);
+
+        $customer->update([
+            'password'             => Hash::make($temporaryPassword),
+            'must_change_password' => true,
+        ]);
+
+        return back()->with('temp_password', $temporaryPassword)
+            ->with('success', "Đã đặt lại mật khẩu cho khách hàng. Vui lòng cung cấp mật khẩu tạm thời bên dưới cho người dùng.");
     }
 }

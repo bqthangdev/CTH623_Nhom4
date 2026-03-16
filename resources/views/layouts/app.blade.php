@@ -58,6 +58,7 @@
                     </button>
                     <div x-show="open" @click.outside="open = false" class="absolute right-0 mt-2 w-40 bg-white shadow-lg rounded-lg py-1 z-50">
                         <a href="{{ route('shop.orders.index') }}" class="block px-4 py-2 text-sm hover:bg-gray-100">Đơn hàng</a>
+                        <a href="{{ route('password.change') }}" class="block px-4 py-2 text-sm hover:bg-gray-100">Đổi mật khẩu</a>
                         @if(auth()->user()->isAdmin())
                         <a href="{{ route('admin.dashboard') }}" class="block px-4 py-2 text-sm hover:bg-gray-100">Quản trị</a>
                         @endif

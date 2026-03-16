@@ -56,13 +56,15 @@ smartshop/
 │   │   │   ├── Admin/          # 9 controllers phân hệ quản trị
 │   │   │   ├── Api/            # 4 API controllers (cart, order, visual-search, recommendations)
 │   │   │   ├── Auth/           # 9 controllers xác thực (Breeze)
-│   │   │   └── Shop/           # 9 controllers phân hệ khách hàng
+│   │   │   └── Shop/           # 10 controllers phân hệ khách hàng
 │   │   ├── Middleware/
+│   │   │   ├── CheckRole.php           # Kiểm tra phân quyền (role:admin)
+│   │   │   └── ForcePasswordChange.php # Buộc đổi mật khẩu khi must_change_password = true
 │   │   └── Requests/
 │   │       ├── Admin/          # 13 Form Requests cho admin
 │   │       ├── Api/            # 2 Form Requests cho API
-│   │       ├── Auth/           # LoginRequest, RegisterRequest
-│   │       └── Shop/           # 6 Form Requests cho shop
+│   │       ├── Auth/           # LoginRequest
+│   │       └── Shop/           # 7 Form Requests cho shop
 │   ├── Models/                 # 16 Eloquent models
 │   ├── Repositories/           # ProductRepository, OrderRepository, ShippingCarrierRepository
 │   ├── Services/               # 10 Service classes:
@@ -98,7 +100,7 @@ smartshop/
 │       ├── profile/            # 1 view + 3 partials
 │       └── shop/               # 10 Blade views cho shop (7 modules)
 ├── routes/
-│   ├── web.php                 # Web routes (shop + admin, 30+ named routes)
+│   ├── web.php                 # Web routes (shop + admin, 32+ named routes)
 │   ├── api.php                 # API routes (10 endpoints)
 │   └── auth.php                # Auth routes (Breeze)
 └── tests/
