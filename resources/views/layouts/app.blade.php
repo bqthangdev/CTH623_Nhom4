@@ -67,7 +67,8 @@
                     </div>
                 </div>
                 @else
-                <a href="{{ route('login') }}" class="text-sm text-indigo-600 hover:underline">Đăng nhập</a>
+                <a href="{{ route('login') }}" class="text-sm text-gray-600 hover:underline">Đăng nhập</a>
+                <a href="{{ route('register') }}" class="text-sm bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition">Đăng ký</a>
                 @endauth
             </div>
         </div>

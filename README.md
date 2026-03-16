@@ -61,7 +61,7 @@ smartshop/
 │   │   └── Requests/
 │   │       ├── Admin/          # 13 Form Requests cho admin
 │   │       ├── Api/            # 2 Form Requests cho API
-│   │       ├── Auth/           # LoginRequest
+│   │       ├── Auth/           # LoginRequest, RegisterRequest
 │   │       └── Shop/           # 6 Form Requests cho shop
 │   ├── Models/                 # 16 Eloquent models
 │   ├── Repositories/           # ProductRepository, OrderRepository, ShippingCarrierRepository
