@@ -78,7 +78,10 @@
                         .then(d => {
                             messageType = d.success ? 'success' : 'error';
                             message = d.message;
-                            if (d.success) window.dispatchEvent(new CustomEvent('cart-updated', { detail: { count: d.cart_count } }));
+                            if (d.success) {
+                                window.dispatchEvent(new CustomEvent('cart-updated', { detail: { count: d.cart_count } }));
+                                if (typeof _trackAddToCart !== 'undefined') _trackAddToCart(qty);
+                            }
                             setTimeout(() => message = '', 3000);
                         })
                         .catch(() => {
@@ -215,3 +218,36 @@
 </section>
 
 @endsection
+
+@push('scripts')
+<script>
+window._trackAddToCart = function(qty) {
+    if (typeof gtag === 'undefined') return;
+    gtag('event', 'add_to_cart', {
+        currency: 'VND',
+        value: {{ $product->effective_price }} * qty,
+        items: [{
+            item_id: '{{ $product->id }}',
+            item_name: {{ Illuminate\Support\Js::from($product->name) }},
+            item_category: {{ Illuminate\Support\Js::from($product->category->name) }},
+            price: {{ $product->effective_price }},
+            quantity: qty
+        }]
+    });
+};
+(function() {
+    if (typeof gtag === 'undefined') return;
+    gtag('event', 'view_item', {
+        currency: 'VND',
+        value: {{ $product->effective_price }},
+        items: [{
+            item_id: '{{ $product->id }}',
+            item_name: {{ Illuminate\Support\Js::from($product->name) }},
+            item_category: {{ Illuminate\Support\Js::from($product->category->name) }},
+            price: {{ $product->effective_price }},
+            quantity: 1
+        }]
+    });
+})();
+</script>
+@endpush

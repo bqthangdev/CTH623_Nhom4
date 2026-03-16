@@ -40,4 +40,8 @@ return [
         'timeout' => env('AI_SERVICE_TIMEOUT', 30),
     ],
 
+    'google_analytics' => [
+        'id' => env('GOOGLE_ANALYTICS_ID'),
+    ],
+
 ];

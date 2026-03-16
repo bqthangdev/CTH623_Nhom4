@@ -102,3 +102,25 @@
 </div>
 
 @endsection
+
+@push('scripts')
+<script>
+(function() {
+    if (typeof gtag === 'undefined') return;
+    gtag('event', 'begin_checkout', {
+        currency: 'VND',
+        value: {{ $subtotal + 30000 }},
+        items: [
+            @foreach($cartItems as $item)
+            {
+                item_id: '{{ $item->product_id }}',
+                item_name: {{ Illuminate\Support\Js::from($item->product->name) }},
+                price: {{ $item->product->effective_price }},
+                quantity: {{ $item->quantity }}
+            },
+            @endforeach
+        ]
+    });
+})();
+</script>
+@endpush

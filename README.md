@@ -88,6 +88,7 @@ smartshop/
 ├── docs/
 │   ├── AI_FEATURES.md          # Tài liệu tính năng AI (CLIP, visual search, recommendations)
 │   ├── CODING_STANDARDS.md     # Quy tắc lập trình dự án
+│   ├── GOOGLE_ANALYTICS.md     # Hướng dẫn tích hợp Google Analytics 4
 │   ├── HUONG_DAN_DEPLOY_AZURE.md
 │   ├── HUONG_DAN_KHOI_CHAY.md  # Hướng dẫn khởi chạy local
 │   └── TESTING_GUIDELINES.md
@@ -95,7 +96,7 @@ smartshop/
 │   └── views/
 │       ├── admin/              # 30 Blade views cho admin (9 modules)
 │       ├── auth/               # 6 views xác thực
-│       ├── components/         # 15 Blade components dùng chung
+│       ├── components/         # 16 Blade components dùng chung
 │       ├── layouts/            # app.blade.php, admin.blade.php, guest.blade.php
 │       ├── profile/            # 1 view + 3 partials
 │       └── shop/               # 10 Blade views cho shop (7 modules)
@@ -222,3 +223,4 @@ php artisan embeddings:generate
 - [Tài liệu Chức năng AI](docs/AI_FEATURES.md)
 - [Hướng dẫn khởi chạy](docs/HUONG_DAN_KHOI_CHAY.md)
 - [Hướng dẫn triển khai Azure](docs/HUONG_DAN_DEPLOY_AZURE.md)
+- [Tích hợp Google Analytics 4](docs/GOOGLE_ANALYTICS.md)

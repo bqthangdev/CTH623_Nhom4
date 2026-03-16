@@ -6,6 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ config('app.name') }}  @yield('title', 'Mua sắm thông minh')</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <x-analytics />
     @stack('styles')
 </head>
 <body class="bg-gray-50 text-gray-800">

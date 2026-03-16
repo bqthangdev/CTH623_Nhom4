@@ -36,6 +36,7 @@ class CheckoutController extends Controller
         $order = $this->orderService->placeOrder(auth()->user(), $request->validated());
 
         return redirect()->route('shop.orders.show', $order)
-            ->with('success', 'Đặt hàng thành công! Mã đơn hàng #' . $order->id);
+            ->with('success', 'Đặt hàng thành công! Mã đơn hàng #' . $order->id)
+            ->with('order_just_placed', $order->id);
     }
 }

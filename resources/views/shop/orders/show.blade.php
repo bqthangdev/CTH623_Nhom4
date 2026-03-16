@@ -123,3 +123,30 @@
 </div>
 
 @endsection
+
+@if(session('order_just_placed') == $order->id)
+@push('scripts')
+<script>
+(function() {
+    if (typeof gtag === 'undefined') return;
+    gtag('event', 'purchase', {
+        transaction_id: '{{ $order->id }}',
+        currency: 'VND',
+        value: {{ $order->final_amount }},
+        shipping: {{ $order->shipping_fee }},
+        tax: 0,
+        items: [
+            @foreach($order->items as $item)
+            {
+                item_id: '{{ $item->product_id ?? '' }}',
+                item_name: {{ Illuminate\Support\Js::from($item->product_name) }},
+                price: {{ $item->price }},
+                quantity: {{ $item->quantity }}
+            },
+            @endforeach
+        ]
+    });
+})();
+</script>
+@endpush
+@endif
