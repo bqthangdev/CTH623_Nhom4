@@ -74,12 +74,16 @@ Component vô danh này:
 
 ### 3.2. Vị trí trong layout
 
-Component được đặt trong `<head>` của `resources/views/layouts/app.blade.php` (layout phân hệ shop):
+Component được đặt trong `<head>` của hai layout:
+
+| Layout | Phạm vi trang |
+|---|---|
+| `layouts/app.blade.php` | Toàn bộ trang shop (home, sản phẩm, giỏ hàng, đơn hàng...) — cả guest lẫn user đã đăng nhập |
+| `layouts/guest.blade.php` | Trang xác thực (đăng nhập, đăng ký,...) — luôn là guest |
 
 ```blade
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 <x-analytics />
-@stack('styles')
 ```
 
 > **Admin panel không tích hợp GA4.** Layout `layouts/admin.blade.php` không có `<x-analytics />` — traffic quản trị viên không ảnh hưởng số liệu trang khách hàng.
@@ -258,7 +262,8 @@ resources/views/
     components/
         analytics.blade.php       # <x-analytics /> — inject gtag.js
     layouts/
-        app.blade.php             # dùng <x-analytics /> trong <head>
+        app.blade.php             # dùng <x-analytics /> trong <head> (shop)
+        guest.blade.php           # dùng <x-analytics /> trong <head> (auth pages)
     shop/
         products/show.blade.php   # view_item + add_to_cart events
         checkout/index.blade.php  # begin_checkout event
