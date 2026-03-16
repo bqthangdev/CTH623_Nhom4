@@ -174,6 +174,12 @@ QUEUE_CONNECTION=database
 
 AI_SERVICE_URL=http://127.0.0.1:8001
 AI_SERVICE_TIMEOUT=30
+
+# Tùy chỉnh AI service (tùy chọn — bỏ comment để ghi đè giá trị mặc định)
+# CLIP_MODEL=ViT-B-32                # ViT-B-32 (512-dim, nhẹ) | ViT-L-14 (768-dim, chính xác hơn)
+# VISUAL_SEARCH_THRESHOLD=0.60       # Ngưỡng cosine similarity tìm kiếm ảnh (0–1)
+# RECOMMENDATION_THRESHOLD=0.40      # Ngưỡng cosine similarity gợi ý sản phẩm (0–1)
+# CF_BLEND_WEIGHT=0.35               # Tỉ lệ tối đa tín hiệu Collaborative Filtering (0–1)
 ```
 
 ---
@@ -198,6 +204,14 @@ php artisan storage:link
 ```bash
 cd /var/www/smartshop
 php artisan migrate --force --seed
+```
+
+### Sinh product embeddings cho AI service
+
+Bước này tính toán vector CLIP cho toàn bộ sản phẩm và lưu vào bảng `product_embeddings`. **Bắt buộc chạy một lần sau khi seed** để tính năng tìm kiếm ảnh và gợi ý AI hoạt động. Yêu cầu AI service đã khởi động (Bước 7.3).
+
+```bash
+php artisan embeddings:generate
 ```
 
 ### Tối ưu cache cho production
@@ -278,6 +292,10 @@ sudo certbot renew --dry-run
 ```
 
 ### 7.3 AI Service với Supervisor
+
+> **Lưu ý dung lượng:** Lần đầu khởi động, AI service tự tải trọng số CLIP model về
+> `~/.cache/huggingface/` — khoảng **350 MB** với `ViT-B-32` (mặc định) hoặc **890 MB**
+> với `ViT-L-14`. Đảm bảo VM còn đủ dung lượng disk và có kết nối Internet.
 
 Tạo virtual environment cho Python:
 
@@ -375,7 +393,14 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
+# Khởi động lại queue worker
 sudo supervisorctl restart smartshop-queue
+
+# Khởi động lại AI service nếu có thay đổi trong ai-service/
+sudo supervisorctl restart smartshop-ai
+
+# Tái sinh embeddings nếu có sản phẩm mới được thêm vào
+# php artisan embeddings:generate
 ```
 
 ---
