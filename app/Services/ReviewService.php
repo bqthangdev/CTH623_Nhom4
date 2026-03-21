@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Review;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
 class ReviewService
@@ -51,5 +52,29 @@ class ReviewService
                 $q->where('id', $orderId);
             }
         })->where('product_id', $productId)->exists();
+    }
+
+    /**
+     * Returns review display data for the order show page.
+     *
+     * @return array{reviewedProductIds: int[], canReview: bool, reviewDeadline: \Carbon\Carbon|null}
+     */
+    public function getOrderReviewInfo(Order $order, int $userId): array
+    {
+        if ($order->status !== 'delivered') {
+            return ['reviewedProductIds' => [], 'canReview' => false, 'reviewDeadline' => null];
+        }
+
+        $productIds         = $order->items->pluck('product_id')->filter()->all();
+        $reviewedProductIds = Review::where('user_id', $userId)
+            ->where('order_id', $order->id)
+            ->whereIn('product_id', $productIds)
+            ->pluck('product_id')
+            ->all();
+
+        $reviewDeadline = $order->delivered_at?->addDays(5);
+        $canReview      = $reviewDeadline?->isFuture() ?? false;
+
+        return compact('reviewedProductIds', 'canReview', 'reviewDeadline');
     }
 }

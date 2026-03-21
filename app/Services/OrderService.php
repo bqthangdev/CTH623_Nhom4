@@ -2,12 +2,14 @@
 
 namespace App\Services;
 
+use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\UserAddress;
 use App\Models\Voucher;
 use App\Repositories\OrderRepository;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -205,6 +207,56 @@ class OrderService
 
             return $order;
         });
+    }
+
+    /**
+     * Filters order items by stock availability for the reorder flow.
+     *
+     * @return array{items: array<int, array{product_id: int, quantity: int}>, skipped: string[]}
+     */
+    public function prepareReorder(Order $order): array
+    {
+        $reorderItems = [];
+        $skipped      = [];
+
+        foreach ($order->items as $item) {
+            if (! $item->product || $item->product->stock <= 0) {
+                $skipped[] = $item->product_name;
+                continue;
+            }
+
+            $reorderItems[] = [
+                'product_id' => $item->product_id,
+                'quantity'   => min($item->quantity, $item->product->stock),
+            ];
+        }
+
+        return ['items' => $reorderItems, 'skipped' => $skipped];
+    }
+
+    /**
+     * Builds virtual CartItem objects from raw session data for the reorder checkout view.
+     * Does not touch the user's actual cart.
+     */
+    public function buildReorderCheckoutItems(array $rawItems): Collection
+    {
+        $productIds = collect($rawItems)->pluck('product_id')->all();
+        $products   = Product::with('primaryImage')->whereIn('id', $productIds)->get()->keyBy('id');
+
+        return collect($rawItems)->map(function (array $row) use ($products): ?CartItem {
+            $product = $products->get($row['product_id']);
+            if (! $product) {
+                return null;
+            }
+
+            $cartItem = new CartItem([
+                'product_id' => $row['product_id'],
+                'quantity'   => $row['quantity'],
+            ]);
+            $cartItem->setRelation('product', $product);
+
+            return $cartItem;
+        })->filter()->values();
     }
 
     public function updateStatus(Order $order, string $newStatus): Order

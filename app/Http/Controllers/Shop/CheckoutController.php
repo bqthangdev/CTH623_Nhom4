@@ -4,9 +4,7 @@ namespace App\Http\Controllers\Shop;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Shop\CheckoutRequest;
-use App\Models\CartItem;
 use App\Models\PaymentMethod;
-use App\Models\Product;
 use App\Models\Voucher;
 use App\Services\CartService;
 use App\Services\OrderService;
@@ -54,22 +52,7 @@ class CheckoutController extends Controller
             return redirect()->route('shop.orders.index')->with('error', 'Phiên đặt lại đã hết hạn. Vui lòng thử lại.');
         }
 
-        $productIds = collect($rawItems)->pluck('product_id')->all();
-        $products   = Product::with('primaryImage')->whereIn('id', $productIds)->get()->keyBy('id');
-
-        $cartItems = collect($rawItems)->map(function (array $row) use ($products) {
-            $product = $products->get($row['product_id']);
-            if (! $product) {
-                return null;
-            }
-            $cartItem = new CartItem([
-                'product_id' => $row['product_id'],
-                'quantity'   => $row['quantity'],
-            ]);
-            $cartItem->setRelation('product', $product);
-
-            return $cartItem;
-        })->filter()->values();
+        $cartItems = $this->orderService->buildReorderCheckoutItems($rawItems);
 
         if ($cartItems->isEmpty()) {
             return redirect()->route('shop.orders.index')->with('error', 'Các sản phẩm trong đơn hàng không còn khả dụng.');
