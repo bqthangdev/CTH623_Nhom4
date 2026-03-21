@@ -11,38 +11,57 @@
     <div x-data="visualSearchUpload()" class="bg-white rounded-lg shadow p-6">
         <form method="POST" action="{{ route('shop.visual-search.search') }}"
             enctype="multipart/form-data"
-            @submit="loading = true"
+            @submit.prevent="if (hasFile) { loading = true; $el.submit(); }"
             class="space-y-4">
             @csrf
 
+            {{-- Preview of selected image --}}
+            <template x-if="previewSrc">
+                <div class="mb-3">
+                    <img :src="previewSrc" class="w-48 h-36 object-cover rounded-lg border border-gray-200 mx-auto">
+                </div>
+            </template>
+
+            {{-- Drop zone --}}
             <div
-                class="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition"
-                :class="dragging ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300 hover:border-indigo-400'"
+                class="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition select-none"
+                :class="dragging ? 'border-indigo-500 bg-indigo-50'
+                       : (hasFile  ? 'border-green-500 bg-green-50'
+                                   : 'border-gray-300 hover:border-indigo-400')"
                 @click="$refs.fileInput.click()"
                 @dragover.prevent="dragging = true"
                 @dragleave.prevent="dragging = false"
                 @drop.prevent="handleDrop($event)">
-                <template x-if="!preview">
-                    <div>
-                        <svg class="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+
+                <template x-if="!hasFile">
+                    <div class="pointer-events-none space-y-1">
+                        <svg class="w-10 h-10 text-gray-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/>
                         </svg>
-                        <p class="text-gray-500 text-sm">Nhấp để chọn ảnh hoặc kéo thả vào đây</p>
-                        <p class="text-xs text-gray-400 mt-1">JPG, PNG, WEBP — tối đa 5MB</p>
+                        <p class="text-sm text-gray-600">Kéo ảnh vào đây hoặc <span class="text-indigo-600 font-medium">nhấn để chọn</span></p>
+                        <p class="text-xs text-gray-400">JPG, PNG, WebP — tối đa 5MB, tự động nén nếu lớn hơn</p>
                     </div>
                 </template>
-                <template x-if="preview">
-                    <img :src="preview" alt="Preview" class="max-h-48 mx-auto rounded-lg object-contain">
+
+                <template x-if="hasFile">
+                    <div class="pointer-events-none space-y-1">
+                        <svg class="w-10 h-10 text-green-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                        </svg>
+                        <p class="text-sm text-green-700 font-medium" x-text="fileName"></p>
+                        <p class="text-xs text-gray-400">Nhấn hoặc kéo để đổi ảnh</p>
+                    </div>
                 </template>
+
                 <input x-ref="fileInput" type="file" name="image" accept="image/jpeg,image/png,image/webp"
                     class="hidden"
-                    @change="preview = URL.createObjectURL($event.target.files[0])">
+                    @change="handleChange($event)">
             </div>
 
             @error('image')<p class="text-red-500 text-sm">{{ $message }}</p>@enderror
 
             <button type="submit"
-                :disabled="!preview || loading"
+                :disabled="!hasFile || loading"
                 class="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed">
                 <span x-show="!loading">Tìm kiếm</span>
                 <span x-show="loading">Đang tìm kiếm...</span>
@@ -94,20 +113,29 @@
 <script>
 function visualSearchUpload() {
     return {
-        preview: null,
+        hasFile: false,
+        fileName: '',
+        previewSrc: '',
         loading: false,
         dragging: false,
+        async handleFiles(fileList) {
+            const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+            const file = Array.from(fileList).find(f => allowed.includes(f.type));
+            if (!file) return;
+            const compressed = await window._compressImage(file);
+            const dt = new DataTransfer();
+            dt.items.add(compressed);
+            this.$refs.fileInput.files = dt.files;
+            this.hasFile = true;
+            this.fileName = compressed.name;
+            this.previewSrc = URL.createObjectURL(compressed);
+        },
         handleDrop(event) {
             this.dragging = false;
-            const file = event.dataTransfer.files[0];
-            if (!file) return;
-            const allowed = ['image/jpeg', 'image/png', 'image/webp'];
-            if (!allowed.includes(file.type)) return;
-            this.preview = URL.createObjectURL(file);
-            // Assign dropped file to the hidden input so the form submits it correctly
-            const dt = new DataTransfer();
-            dt.items.add(file);
-            this.$refs.fileInput.files = dt.files;
+            this.handleFiles(event.dataTransfer.files);
+        },
+        handleChange(event) {
+            this.handleFiles(event.target.files);
         },
     };
 }

@@ -8,7 +8,7 @@
     <form method="GET" action="{{ route('admin.orders.index') }}" class="flex gap-2 flex-1">
         <input type="text" name="search" value="{{ request('search') }}" placeholder="Tìm tên khách, SĐT..."
             class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-300 focus:outline-none">
-        <select name="status" class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-300 focus:outline-none">
+        <select name="status" class="border border-gray-300 rounded-lg pl-3 pr-10 py-1.5 text-sm focus:ring-2 focus:ring-indigo-300 focus:outline-none">
             <option value="">Tất cả trạng thái</option>
             @foreach(['pending' => 'Chờ xác nhận', 'confirmed' => 'Đã xác nhận', 'shipping' => 'Đang giao', 'delivered' => 'Đã giao', 'cancelled' => 'Đã hủy'] as $val => $label)
             <option value="{{ $val }}" {{ request('status') === $val ? 'selected' : '' }}>{{ $label }}</option>

@@ -41,7 +41,8 @@ class ProductController extends Controller
         $inWishlist      = $request->user()
             ? $this->wishlistService->isWishlisted($request->user()->id, $product->id)
             : false;
+        $soldCount = $this->productService->getSoldCount($product);
 
-        return view('shop.products.show', compact('product', 'recommendations', 'inWishlist'));
+        return view('shop.products.show', compact('product', 'recommendations', 'inWishlist', 'soldCount'));
     }
 }

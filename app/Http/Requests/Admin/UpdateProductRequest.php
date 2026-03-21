@@ -23,8 +23,8 @@ class UpdateProductRequest extends FormRequest
             'description'        => ['nullable', 'string', 'max:20000'],
             'status'             => ['boolean'],
             'is_featured'        => ['boolean'],
-            'images'             => ['nullable', 'array', 'max:10'],
-            'images.*'           => ['image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'images'             => ['nullable', 'array', 'max:5'],
+            'images.*'           => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'attributes'         => ['nullable', 'array'],
             'attributes.*.key'   => ['required_with:attributes', 'string', 'max:100'],
             'attributes.*.value' => ['required_with:attributes', 'string', 'max:255'],
@@ -39,7 +39,7 @@ class UpdateProductRequest extends FormRequest
             'sale_price.lt'        => 'Giá khuyến mãi phải nhỏ hơn giá gốc.',
             'category_id.required' => 'Vui lòng chọn danh mục.',
             'category_id.exists'   => 'Danh mục không tồn tại.',
-            'images.*.max'         => 'Mỗi ảnh không được vượt quá 2MB.',
+            'images.*.max'         => 'Mỗi ảnh không được vượt quá 5MB.',
         ];
     }
 }

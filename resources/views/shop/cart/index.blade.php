@@ -12,12 +12,22 @@
     <a href="{{ route('shop.products.index') }}" class="text-indigo-600 hover:underline">Tiếp tục mua sắm →</a>
 </div>
 @else
+
+{{-- Stock adjustment warnings --}}
+@if(!empty($messages))
+<div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+    @foreach($messages as $msg)
+    <p class="text-sm text-yellow-800">&#9888; {{ $msg }}</p>
+    @endforeach
+</div>
+@endif
+
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
     {{-- Items list --}}
     <div class="lg:col-span-2 space-y-4">
         @foreach($cartItems as $item)
-        <div class="bg-white rounded-lg shadow p-4 flex gap-4">
+        <div class="bg-white rounded-lg shadow p-4 flex gap-4 {{ $item->product->stock === 0 ? 'opacity-60' : '' }}">
             <img src="{{ $item->product->image_url }}" alt="{{ $item->product->name }}"
                 class="w-20 h-20 object-cover rounded-lg flex-shrink-0">
             <div class="flex-1">
@@ -28,17 +38,23 @@
                 <p class="text-indigo-600 font-semibold mt-1">
                     {{ number_format($item->product->effective_price) }}đ
                 </p>
-                <div class="flex items-center gap-3 mt-2">
+                @if($item->product->stock === 0)
+                <span class="inline-block bg-red-100 text-red-600 text-xs px-2 py-0.5 rounded-full mt-1">Hết hàng</span>
+                @elseif($item->product->stock < $item->quantity)
+                <span class="inline-block bg-yellow-100 text-yellow-700 text-xs px-2 py-0.5 rounded-full mt-1">Chỉ còn {{ $item->product->stock }}</span>
+                @endif
+                <div class="flex flex-wrap items-center gap-3 mt-2">
                     <form method="POST" action="{{ route('shop.cart.update', $item->id) }}" class="flex items-center gap-1">
                         @csrf @method('PATCH')
-                        <input type="number" name="quantity" value="{{ $item->quantity }}" min="1" max="99"
-                            class="w-16 border border-gray-300 rounded px-2 py-1 text-sm text-center">
-                        <button type="submit" class="text-xs text-indigo-600 hover:underline">Cập nhật</button>
+                        <input type="number" name="quantity" value="{{ $item->quantity }}" min="1" max="{{ $item->product->stock ?: 99 }}"
+                            class="w-16 border border-gray-300 rounded px-2 py-1 text-sm text-center {{ $item->product->stock === 0 ? 'bg-gray-100' : '' }}"
+                            {{ $item->product->stock === 0 ? 'disabled' : '' }}>
+                        <button type="submit" class="text-xs border border-indigo-400 text-indigo-600 px-2 py-1 rounded hover:bg-indigo-50 transition">Cập nhật</button>
                     </form>
 
                     <form method="POST" action="{{ route('shop.cart.destroy', $item->id) }}">
                         @csrf @method('DELETE')
-                        <button type="submit" class="text-xs text-red-500 hover:underline">Xóa</button>
+                        <button type="submit" class="text-xs border border-red-300 text-red-500 px-2 py-1 rounded hover:bg-red-50 transition">Xóa</button>
                     </form>
                 </div>
             </div>

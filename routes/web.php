@@ -35,10 +35,22 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     // Thanh toán & Đơn hàng
     Route::get('/checkout', [Shop\CheckoutController::class, 'index'])->name('shop.checkout.index');
     Route::post('/checkout', [Shop\CheckoutController::class, 'store'])->name('shop.checkout.store');
+    Route::post('/checkout/validate-voucher', [Shop\CheckoutController::class, 'validateVoucher'])->name('shop.checkout.validate-voucher');
+    Route::get('/checkout/reorder', [Shop\CheckoutController::class, 'reorderIndex'])->name('shop.checkout.reorder');
+    Route::post('/checkout/reorder', [Shop\CheckoutController::class, 'reorderStore'])->name('shop.checkout.reorder.store');
     Route::get('/orders', [Shop\OrderController::class, 'index'])->name('shop.orders.index');
     Route::get('/orders/{order}', [Shop\OrderController::class, 'show'])->name('shop.orders.show');
     Route::post('/orders/{order}/cancel', [Shop\OrderController::class, 'cancel'])->name('shop.orders.cancel');
     Route::post('/orders/{order}/confirm-delivery', [Shop\OrderController::class, 'confirmDelivery'])->name('shop.orders.confirm-delivery');
+    Route::post('/orders/{order}/reorder', [Shop\OrderController::class, 'reorder'])->name('shop.orders.reorder');
+
+    // Địa chỉ giao hàng
+    Route::get('/addresses', [Shop\AddressController::class, 'index'])->name('shop.addresses.index');
+    Route::post('/addresses', [Shop\AddressController::class, 'store'])->name('shop.addresses.store');
+    Route::get('/addresses/{address}/edit', [Shop\AddressController::class, 'edit'])->name('shop.addresses.edit');
+    Route::put('/addresses/{address}', [Shop\AddressController::class, 'update'])->name('shop.addresses.update');
+    Route::delete('/addresses/{address}', [Shop\AddressController::class, 'destroy'])->name('shop.addresses.destroy');
+    Route::patch('/addresses/{address}/set-default', [Shop\AddressController::class, 'setDefault'])->name('shop.addresses.set-default');
 
     // Đánh giá
     Route::post('/products/{product}/reviews', [Shop\ReviewController::class, 'store'])->name('shop.reviews.store');

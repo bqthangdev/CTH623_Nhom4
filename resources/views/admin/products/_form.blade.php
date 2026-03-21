@@ -71,8 +71,14 @@
     <label class="block text-sm font-medium text-gray-700 mb-1">
         Ảnh sản phẩm {{ isset($product) ? '(thêm ảnh mới)' : '*' }}
     </label>
-    <input type="file" name="images[]" multiple accept="image/jpeg,image/png,image/webp"
-        class="block w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100">
+    <x-upload-zone
+        name="images[]"
+        :multiple="true"
+        :max-files="5"
+        :hint="isset($product)
+            ? 'Chọn tối đa 5 ảnh mới — JPG, PNG, WebP — tối đa 5MB, tự động nén nếu lớn hơn'
+            : 'Chọn tối đa 5 ảnh — JPG, PNG, WebP — tối đa 5MB, tự động nén nếu lớn hơn'"
+    />
     @error('images')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
     @error('images.*')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
 </div>

@@ -65,6 +65,11 @@ class Product extends Model
         return $this->hasMany(Review::class);
     }
 
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', true);
@@ -83,6 +88,23 @@ class Product extends Model
     public function getEffectivePriceAttribute(): float
     {
         return $this->sale_price > 0 ? (float) $this->sale_price : (float) $this->price;
+    }
+
+    public function getAverageRatingAttribute(): ?float
+    {
+        // Use pre-computed aggregate from withAvg('reviews', 'rating') — no N+1
+        if (array_key_exists('reviews_avg_rating', $this->attributes)) {
+            $avg = $this->attributes['reviews_avg_rating'];
+            return $avg !== null ? (float) round((float) $avg, 1) : null;
+        }
+
+        // Fall back to loaded relationship
+        if (! $this->relationLoaded('reviews')) {
+            return null;
+        }
+
+        $count = $this->reviews->count();
+        return $count > 0 ? (float) round($this->reviews->avg('rating'), 1) : null;
     }
 
     public function getImageUrlAttribute(): string

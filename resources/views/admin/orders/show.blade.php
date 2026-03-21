@@ -30,7 +30,7 @@
                     <form method="POST" action="{{ route('admin.orders.update-shipping', $order->id) }}" class="flex items-center gap-2 flex-wrap">
                         @csrf @method('PATCH')
                         <select name="shipping_carrier_id" required
-                            class="border @error('shipping_carrier_id') border-red-400 @else border-gray-300 @enderror rounded-lg pl-3 pr-8 py-1.5 text-sm min-w-40 appearance-auto">
+                            class="border @error('shipping_carrier_id') border-red-400 @else border-gray-300 @enderror rounded-lg pl-3 pr-10 py-1.5 text-sm min-w-40">
                             <option value="">-- Đơn vị vận chuyển --</option>
                             @foreach($carriers as $carrier)
                             <option value="{{ $carrier->id }}" {{ old('shipping_carrier_id') == $carrier->id ? 'selected' : '' }}>
@@ -57,7 +57,7 @@
                     {{-- Other statuses with transitions (e.g. pending → confirmed/cancelled) --}}
                     <form method="POST" action="{{ route('admin.orders.update', $order->id) }}" class="flex items-center gap-2">
                         @csrf @method('PUT')
-                        <select name="status" class="border border-gray-300 rounded-lg pl-3 pr-8 py-1.5 text-sm min-w-36 appearance-auto">
+                        <select name="status" class="border border-gray-300 rounded-lg pl-3 pr-10 py-1.5 text-sm min-w-36">
                             @foreach($transitions as $val)
                             <option value="{{ $val }}">{{ $statusLabels[$val] }}</option>
                             @endforeach
@@ -67,7 +67,7 @@
                         </button>
                     </form>
                 @elseif($order->status === 'shipping')
-                    <span class="text-sm text-gray-500 italic">Chờ khách hàng xác nhận đã nhận hàng</span>
+                    <span class="text-sm text-red-600 italic">Chờ khách hàng xác nhận đã nhận hàng</span>
                 @else
                     <span class="text-sm text-gray-500 italic">Đã kết thúc</span>
                 @endif
@@ -96,6 +96,9 @@
             <div class="space-y-3">
                 @foreach($order->items as $item)
                 <div class="flex gap-3 text-sm">
+                    <img src="{{ $item->product?->image_url ?? asset('images/no-image.svg') }}"
+                         alt="{{ $item->product_name }}"
+                         class="w-12 h-12 object-cover rounded-lg bg-gray-100 flex-shrink-0">
                     <div class="flex-1">
                         <p class="font-medium">{{ $item->product_name }}</p>
                         <p class="text-gray-500">{{ number_format($item->price) }}đ × {{ $item->quantity }}</p>

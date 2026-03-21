@@ -11,6 +11,7 @@ use App\Services\CartService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class CartController extends Controller
@@ -23,10 +24,11 @@ class CartController extends Controller
     {
         /** @var \App\Models\User $user */
         $user      = $request->user();
+        $messages  = $this->cartService->sanitizeStockQuantities($user);
         $cartItems = $this->cartService->getItems($user);
         $total     = $this->cartService->getTotal($user);
 
-        return view('shop.cart.index', compact('cartItems', 'total'));
+        return view('shop.cart.index', compact('cartItems', 'total', 'messages'));
     }
 
     public function store(AddToCartRequest $request): RedirectResponse|JsonResponse
@@ -35,14 +37,15 @@ class CartController extends Controller
         $user    = $request->user();
         $product = Product::findOrFail($request->validated('product_id'));
 
-        if ($product->stock < $request->validated('quantity')) {
+        try {
+            $this->cartService->addItem($user, $product->id, $request->validated('quantity'));
+        } catch (ValidationException $e) {
+            $message = collect($e->errors())->flatten()->first();
             if ($request->expectsJson()) {
-                return response()->json(['success' => false, 'message' => 'Sản phẩm không đủ số lượng trong kho.'], 422);
+                return response()->json(['success' => false, 'message' => $message], 422);
             }
-            return back()->with('error', 'Sản phẩm không đủ số lượng trong kho.');
+            return back()->with('error', $message);
         }
-
-        $this->cartService->addItem($user, $product->id, $request->validated('quantity'));
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -61,7 +64,11 @@ class CartController extends Controller
         $user = $request->user();
         abort_unless($cartItem->user_id === $user->id, 403);
 
-        $this->cartService->updateQuantity($user, $cartItem->id, $request->validated('quantity'));
+        try {
+            $this->cartService->updateQuantity($user, $cartItem->id, $request->validated('quantity'));
+        } catch (ValidationException $e) {
+            return back()->with('error', collect($e->errors())->flatten()->first());
+        }
 
         return back()->with('success', 'Đã cập nhật giỏ hàng.');
     }

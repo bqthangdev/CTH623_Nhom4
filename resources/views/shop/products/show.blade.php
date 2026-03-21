@@ -44,6 +44,35 @@
             @endif
         </div>
 
+        {{-- Average rating --}}
+        @if($product->average_rating !== null)
+        <div class="flex items-center gap-2 mb-3">
+            <div class="flex gap-0.5">
+                @for($i = 1; $i <= 5; $i++)
+                <svg class="w-5 h-5 {{ $i <= round($product->average_rating) ? 'text-yellow-400' : 'text-gray-300' }}"
+                     fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                </svg>
+                @endfor
+            </div>
+            <span class="font-semibold text-gray-800">{{ number_format($product->average_rating, 1) }}</span>
+            <span class="text-sm text-gray-500">({{ $product->reviews->count() }} đánh giá)</span>
+        </div>
+        @endif
+
+        {{-- Stock & sold count --}}
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm mb-4">
+            @if($product->stock > 10)
+            <span class="text-green-600 font-medium">● Còn hàng ({{ number_format($product->stock) }} sản phẩm)</span>
+            @elseif($product->stock > 0)
+            <span class="text-yellow-600 font-medium">● Còn {{ $product->stock }} sản phẩm</span>
+            @else
+            <span class="text-red-600 font-medium">● Hết hàng</span>
+            @endif
+            <span class="text-gray-300">|</span>
+            <span class="text-gray-500">Đã bán {{ number_format($soldCount) }}</span>
+        </div>
+
         @if($product->attributes->isNotEmpty())
         <div class="mb-4 space-y-1">
             @foreach($product->attributes as $attr)
@@ -52,18 +81,19 @@
         </div>
         @endif
 
-        <div x-data="{ qty: 1, loading: false, message: '', messageType: 'success' }">
-            <div class="flex items-center gap-3 mb-4">
+        <div x-data="{ qty: 1, loading: false, message: '', messageType: 'success', stock: {{ $product->stock }} }">
+            <div class="flex flex-wrap items-center gap-3 mb-4">
                 <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden">
                     <button @click="qty = Math.max(1, qty - 1)" class="px-3 py-2 hover:bg-gray-100">-</button>
-                    <input type="number" x-model="qty" min="1" class="w-12 text-center border-x px-2 py-2 text-sm">
-                    <button @click="qty++" class="px-3 py-2 hover:bg-gray-100">+</button>
+                    <input type="number" x-model="qty" min="1" :max="stock" class="w-12 text-center border-x px-2 py-2 text-sm">
+                    <button @click="qty = Math.min(stock, qty + 1)" class="px-3 py-2 hover:bg-gray-100">+</button>
                 </div>
 
                 @auth
                 <button
-                    :disabled="loading"
+                    :disabled="loading || stock <= 0"
                     @click="
+                        if (stock <= 0) return;
                         loading = true;
                         fetch('{{ route('shop.cart.store') }}', {
                             method: 'POST',
@@ -91,8 +121,8 @@
                         })
                         .finally(() => loading = false)
                     "
-                    class="flex-1 bg-indigo-600 text-white py-2 px-6 rounded-lg hover:bg-indigo-700 transition font-medium disabled:opacity-50">
-                    <span x-text="loading ? 'Đang thêm...' : 'Thêm vào giỏ hàng'"></span>
+                    class="flex-1 bg-indigo-600 text-white py-2 px-6 rounded-lg hover:bg-indigo-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span x-text="stock <= 0 ? 'Hết hàng' : (loading ? 'Đang thêm...' : 'Thêm vào giỏ hàng')"></span>
                 </button>
                 @else
                 <a href="{{ route('login') }}"
@@ -177,31 +207,7 @@
 <section>
     <h2 class="text-xl font-bold text-gray-800 mb-4">Đánh giá ({{ $product->reviews->count() }})</h2>
 
-    @auth
-    <form method="POST" action="{{ route('shop.reviews.store', $product) }}" class="bg-white rounded-lg shadow p-4 mb-6">
-        @csrf
-        <div class="mb-3">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Đánh giá của bạn</label>
-            <div class="flex gap-1">
-                @for($i = 1; $i <= 5; $i++)
-                <label class="cursor-pointer">
-                    <input type="radio" name="rating" value="{{ $i }}" class="sr-only" required>
-                    <svg class="w-7 h-7 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                    </svg>
-                </label>
-                @endfor
-            </div>
-        </div>
-        <textarea name="comment" rows="3" placeholder="Nhập nhận xét..."
-            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300 focus:outline-none mb-3"></textarea>
-        <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700 transition">
-            Gửi đánh giá
-        </button>
-    </form>
-    @endauth
-
-    @forelse($product->reviews->load('user') as $review)
+    @forelse($product->reviews as $review)
     <div class="bg-white rounded-lg shadow p-4 mb-3">
         <div class="flex items-center gap-2 mb-1">
             <span class="font-medium text-sm">{{ $review->user->name }}</span>
@@ -213,7 +219,7 @@
         @endif
     </div>
     @empty
-    <p class="text-gray-500 text-sm">Chưa có đánh giá nào.</p>
+    <p class="text-gray-500 text-sm">Chưa có đánh giá nào. Hãy mua và trải nghiệm sản phẩm để đánh giá!</p>
     @endforelse
 </section>
 

@@ -12,6 +12,8 @@ class ProductRepository
     public function getForShop(Request $request, int $perPage = 20): LengthAwarePaginator
     {
         return Product::with(['primaryImage', 'category'])
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews')
             ->active()
             ->inStock()
             ->when($request->category, function ($q, $slug) {
@@ -41,6 +43,8 @@ class ProductRepository
     public function getFeatured(int $limit = 8): Collection
     {
         return Product::with('primaryImage')
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews')
             ->active()
             ->featured()
             ->inStock()
@@ -52,6 +56,8 @@ class ProductRepository
     public function getByIds(array $ids): Collection
     {
         return Product::with('primaryImage')
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews')
             ->whereIn('id', $ids)
             ->whereHas('images')
             ->active()

@@ -54,6 +54,13 @@ class ProductService
         $product->delete();
     }
 
+    public function getSoldCount(Product $product): int
+    {
+        return (int) $product->orderItems()
+            ->whereHas('order', fn ($q) => $q->whereNotIn('status', ['cancelled']))
+            ->sum('quantity');
+    }
+
     public function recordView(Product $product, ?int $userId = null): void
     {
         if ($userId) {

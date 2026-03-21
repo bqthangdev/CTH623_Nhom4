@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Order;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Review extends Model
 {
-    protected $fillable = ['user_id', 'product_id', 'rating', 'comment', 'is_approved'];
+    protected $fillable = ['user_id', 'product_id', 'order_id', 'rating', 'comment', 'is_approved'];
 
     protected $casts = [
         'rating'      => 'integer',
@@ -22,5 +23,10 @@ class Review extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
     }
 }

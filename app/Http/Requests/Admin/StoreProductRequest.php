@@ -23,8 +23,8 @@ class StoreProductRequest extends FormRequest
             'description'       => ['nullable', 'string', 'max:20000'],
             'status'            => ['boolean'],
             'is_featured'       => ['boolean'],
-            'images'            => ['required', 'array', 'min:1', 'max:10'],
-            'images.*'          => ['image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'images'            => ['required', 'array', 'min:1', 'max:5'],
+            'images.*'          => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'attributes'        => ['nullable', 'array'],
             'attributes.*.key'  => ['required_with:attributes', 'string', 'max:100'],
             'attributes.*.value'=> ['required_with:attributes', 'string', 'max:255'],
@@ -41,7 +41,7 @@ class StoreProductRequest extends FormRequest
             'category_id.exists'     => 'Danh mục không tồn tại.',
             'images.required'        => 'Vui lòng tải lên ít nhất 1 ảnh sản phẩm.',
             'images.*.image'         => 'File phải là hình ảnh.',
-            'images.*.max'           => 'Mỗi ảnh không được vượt quá 2MB.',
+            'images.*.max'           => 'Mỗi ảnh không được vượt quá 5MB.',
         ];
     }
 }

@@ -30,6 +30,7 @@ class Order extends Model
         'note',
         'shipping_carrier_id',
         'tracking_code',
+        'delivered_at',
     ];
 
     protected $casts = [
@@ -37,6 +38,7 @@ class Order extends Model
         'discount'     => 'decimal:2',
         'shipping_fee' => 'decimal:2',
         'total'        => 'decimal:2',
+        'delivered_at' => 'datetime',
     ];
 
     public function user(): BelongsTo

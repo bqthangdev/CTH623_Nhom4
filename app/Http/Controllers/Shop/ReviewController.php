@@ -26,6 +26,7 @@ class ReviewController extends Controller
                 $product,
                 $request->validated('rating'),
                 $request->validated('comment'),
+                $request->validated('order_id'),
             );
         } catch (ValidationException $e) {
             return back()->with('error', $e->getMessage());

@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Models\Order;
+use App\Models\Product;
 use App\Models\User;
+use App\Models\UserAddress;
 use App\Models\Voucher;
 use App\Repositories\OrderRepository;
 use Illuminate\Support\Facades\DB;
@@ -35,22 +37,36 @@ class OrderService
             }
         }
 
-        return DB::transaction(function () use ($user, $data, $cartItems) {
-            $subtotal = $this->cartService->getTotal($user);
-            $discount = 0;
+        // Resolve shipping address from saved address or inline fields
+        if (! empty($data['address_id'])) {
+            $savedAddress = UserAddress::where('id', $data['address_id'])
+                ->where('user_id', $user->id)
+                ->firstOrFail();
+            $recipientName   = $savedAddress->recipient_name;
+            $phone           = $savedAddress->phone;
+            $shippingAddress = $savedAddress->address;
+        } else {
+            $recipientName   = $data['recipient_name'];
+            $phone           = $data['phone'];
+            $shippingAddress = $data['shipping_address'];
+        }
+
+        return DB::transaction(function () use ($user, $data, $cartItems, $recipientName, $phone, $shippingAddress) {
+            $subtotal  = $this->cartService->getTotal($user);
+            $discount  = 0;
             $voucherId = null;
 
             if (! empty($data['voucher_code'])) {
                 $voucher = Voucher::active()->where('code', $data['voucher_code'])->first();
                 if ($voucher) {
-                    $discount = $voucher->calculateDiscount($subtotal);
+                    $discount  = $voucher->calculateDiscount($subtotal);
                     $voucherId = $voucher->id;
                     $voucher->increment('used_count');
                 }
             }
 
             $shippingFee = 30000; // Phí vận chuyển cố định
-            $total = max(0, $subtotal - $discount + $shippingFee);
+            $total       = max(0, $subtotal - $discount + $shippingFee);
 
             $order = $this->orderRepository->createWithItems(
                 [
@@ -61,9 +77,9 @@ class OrderService
                     'shipping_fee'     => $shippingFee,
                     'total'            => $total,
                     'payment_method'   => $data['payment_method'],
-                    'shipping_address' => $data['shipping_address'],
-                    'phone'            => $data['phone'],
-                    'recipient_name'   => $data['recipient_name'],
+                    'shipping_address' => $shippingAddress,
+                    'phone'            => $phone,
+                    'recipient_name'   => $recipientName,
                     'note'             => $data['note'] ?? null,
                 ],
                 $cartItems->map(fn ($item) => [
@@ -74,12 +90,118 @@ class OrderService
                 ])->all()
             );
 
+            // Auto-save address on first order (no address_id provided and user has no addresses yet)
+            if (empty($data['address_id']) && $user->addresses()->count() === 0) {
+                $user->addresses()->create([
+                    'recipient_name' => $recipientName,
+                    'phone'          => $phone,
+                    'address'        => $shippingAddress,
+                    'is_default'     => true,
+                ]);
+            }
+
             // Giảm tồn kho
             foreach ($cartItems as $item) {
                 $item->product->decrement('stock', $item->quantity);
             }
 
             $this->cartService->clear($user);
+
+            return $order;
+        });
+    }
+
+    /**
+     * Place an order from raw item data (reorder flow).
+     * Does not read or modify the user's cart.
+     *
+     * @param  array<int, array{product_id: int, quantity: int}>  $rawItems
+     */
+    public function placeOrderFromItems(User $user, array $data, array $rawItems): Order
+    {
+        $productIds = collect($rawItems)->pluck('product_id')->all();
+        $products   = Product::whereIn('id', $productIds)->get()->keyBy('id');
+
+        // Validate stock
+        foreach ($rawItems as $row) {
+            $product = $products->get($row['product_id']);
+            if (! $product || $product->stock < $row['quantity']) {
+                $name = $product ? $product->name : "ID #{$row['product_id']}";
+                throw ValidationException::withMessages([
+                    'stock' => "Sản phẩm \"{$name}\" không đủ số lượng trong kho.",
+                ]);
+            }
+        }
+
+        // Resolve shipping address
+        if (! empty($data['address_id'])) {
+            $savedAddress = UserAddress::where('id', $data['address_id'])
+                ->where('user_id', $user->id)
+                ->firstOrFail();
+            $recipientName   = $savedAddress->recipient_name;
+            $phone           = $savedAddress->phone;
+            $shippingAddress = $savedAddress->address;
+        } else {
+            $recipientName   = $data['recipient_name'];
+            $phone           = $data['phone'];
+            $shippingAddress = $data['shipping_address'];
+        }
+
+        return DB::transaction(function () use ($user, $data, $rawItems, $products, $recipientName, $phone, $shippingAddress) {
+            $subtotal = collect($rawItems)->sum(
+                fn ($row) => $products->get($row['product_id'])->effective_price * $row['quantity']
+            );
+            $discount  = 0;
+            $voucherId = null;
+
+            if (! empty($data['voucher_code'])) {
+                $voucher = Voucher::active()->where('code', $data['voucher_code'])->first();
+                if ($voucher) {
+                    $discount  = $voucher->calculateDiscount($subtotal);
+                    $voucherId = $voucher->id;
+                    $voucher->increment('used_count');
+                }
+            }
+
+            $shippingFee = 30000;
+            $total       = max(0, $subtotal - $discount + $shippingFee);
+
+            $order = $this->orderRepository->createWithItems(
+                [
+                    'user_id'          => $user->id,
+                    'voucher_id'       => $voucherId,
+                    'subtotal'         => $subtotal,
+                    'discount'         => $discount,
+                    'shipping_fee'     => $shippingFee,
+                    'total'            => $total,
+                    'payment_method'   => $data['payment_method'],
+                    'shipping_address' => $shippingAddress,
+                    'phone'            => $phone,
+                    'recipient_name'   => $recipientName,
+                    'note'             => $data['note'] ?? null,
+                ],
+                collect($rawItems)->map(fn ($row) => [
+                    'product_id'   => $row['product_id'],
+                    'product_name' => $products->get($row['product_id'])->name,
+                    'price'        => $products->get($row['product_id'])->effective_price,
+                    'quantity'     => $row['quantity'],
+                ])->all()
+            );
+
+            // Decrement stock
+            foreach ($rawItems as $row) {
+                $products->get($row['product_id'])->decrement('stock', $row['quantity']);
+            }
+
+            // Auto-save address on first order when no saved address used
+            if (empty($data['address_id']) && $user->addresses()->count() === 0) {
+                $user->addresses()->create([
+                    'recipient_name' => $recipientName,
+                    'phone'          => $phone,
+                    'address'        => $shippingAddress,
+                    'is_default'     => true,
+                ]);
+            }
 
             return $order;
         });
@@ -101,7 +223,11 @@ class OrderService
             ]);
         }
 
-        $order->update(['status' => $newStatus]);
+        $updateData = ['status' => $newStatus];
+        if ($newStatus === 'delivered') {
+            $updateData['delivered_at'] = now();
+        }
+        $order->update($updateData);
 
         return $order->fresh();
     }
@@ -130,7 +256,7 @@ class OrderService
         abort_if(! $order, 404);
         abort_if($order->status !== 'shipping', 422, 'Chỉ có thể xác nhận đã nhận hàng với đơn đang được giao.');
 
-        $order->update(['status' => 'delivered']);
+        $order->update(['status' => 'delivered', 'delivered_at' => now()]);
 
         return $order->fresh();
     }
