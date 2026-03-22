@@ -24,9 +24,11 @@ class CheckoutRequest extends FormRequest
             'recipient_name'   => [$hasAddress ? 'nullable' : 'required', 'string', 'max:255'],
             'phone'            => [$hasAddress ? 'nullable' : 'required', 'string', 'max:20'],
             'shipping_address' => [$hasAddress ? 'nullable' : 'required', 'string', 'max:500'],
-            'payment_method'   => ['required', 'string', Rule::in($activeCodes)],
-            'voucher_code'     => ['nullable', 'string', 'max:50'],
-            'note'             => ['nullable', 'string', 'max:500'],
+            'payment_method'            => ['required', 'string', Rule::in($activeCodes)],
+            'voucher_code'              => ['nullable', 'string', 'max:50'],
+            'note'                      => ['nullable', 'string', 'max:500'],
+            'selected_cart_item_ids'    => ['nullable', 'array'],
+            'selected_cart_item_ids.*'  => ['integer', 'exists:cart_items,id'],
         ];
     }
 

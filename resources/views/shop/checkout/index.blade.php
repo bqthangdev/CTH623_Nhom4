@@ -14,6 +14,11 @@
         <form method="POST" action="{{ $formAction ?? route('shop.checkout.store') }}" class="bg-white rounded-lg shadow p-6 space-y-4">
             @csrf
 
+            {{-- Pass selected cart item IDs through to OrderService --}}
+            @foreach($cartItems as $item)
+            <input type="hidden" name="selected_cart_item_ids[]" value="{{ $item->id }}">
+            @endforeach
+
             {{-- Address selector (only shown when saved addresses exist) --}}
             @if($addresses->isNotEmpty())
             <div>

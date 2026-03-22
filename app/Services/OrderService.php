@@ -22,11 +22,16 @@ class OrderService
 
     public function placeOrder(User $user, array $data): Order
     {
-        $cartItems = $this->cartService->getItems($user);
+        $allCartItems = $this->cartService->getItems($user);
+
+        $selectedIds = array_filter(array_map('intval', $data['selected_cart_item_ids'] ?? []));
+        $cartItems   = ! empty($selectedIds)
+            ? $allCartItems->filter(fn ($item) => in_array($item->id, $selectedIds))->values()
+            : $allCartItems;
 
         if ($cartItems->isEmpty()) {
             throw ValidationException::withMessages([
-                'cart' => 'Giỏ hàng trống.',
+                'cart' => 'Vui lòng chọn ít nhất một sản phẩm để thanh toán.',
             ]);
         }
 
@@ -54,7 +59,7 @@ class OrderService
         }
 
         return DB::transaction(function () use ($user, $data, $cartItems, $recipientName, $phone, $shippingAddress) {
-            $subtotal  = $this->cartService->getTotal($user);
+            $subtotal  = $cartItems->sum('subtotal');
             $discount  = 0;
             $voucherId = null;
 
@@ -107,7 +112,12 @@ class OrderService
                 $item->product->decrement('stock', $item->quantity);
             }
 
-            $this->cartService->clear($user);
+            $selectedIds = array_filter(array_map('intval', $data['selected_cart_item_ids'] ?? []));
+            if (! empty($selectedIds)) {
+                $this->cartService->removeMultiple($user, $cartItems->pluck('id')->all());
+            } else {
+                $this->cartService->clear($user);
+            }
 
             return $order;
         });

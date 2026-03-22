@@ -20,7 +20,7 @@ class CheckoutController extends Controller
         private readonly OrderService $orderService,
     ) {}
 
-    public function index(): View|RedirectResponse
+    public function index(Request $request): View|RedirectResponse
     {
         $cartItems = $this->cartService->getItems(auth()->user());
 
@@ -28,7 +28,16 @@ class CheckoutController extends Controller
             return redirect()->route('shop.cart.index')->with('error', 'Giỏ hàng của bạn đang trống.');
         }
 
-        $subtotal       = $this->cartService->getTotal(auth()->user());
+        $selectedIds = array_filter(array_map('intval', $request->input('items', [])));
+        if (! empty($selectedIds)) {
+            $cartItems = $cartItems->filter(fn ($item) => in_array($item->id, $selectedIds))->values();
+        }
+
+        if ($cartItems->isEmpty()) {
+            return redirect()->route('shop.cart.index')->with('error', 'Vui lòng chọn ít nhất một sản phẩm để thanh toán.');
+        }
+
+        $subtotal       = $cartItems->sum('subtotal');
         $paymentMethods = PaymentMethod::active()->get();
         $addresses      = auth()->user()->addresses()->orderByDesc('is_default')->orderByDesc('id')->get();
 

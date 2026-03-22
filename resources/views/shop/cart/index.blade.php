@@ -22,12 +22,44 @@
 </div>
 @endif
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6"
+     x-data="{
+         items: [
+             @foreach($cartItems as $item)
+             { id: {{ $item->id }}, price: {{ (int) round($item->product->effective_price) }}, quantity: {{ $item->quantity }}, inStock: {{ $item->product->stock > 0 ? 'true' : 'false' }} },
+             @endforeach
+         ],
+         selectedIds: [],
+         get subtotal() {
+             return this.items
+                 .filter(item => this.selectedIds.includes(item.id))
+                 .reduce((sum, item) => sum + item.price * item.quantity, 0);
+         },
+         get subtotalFmt() {
+             return this.subtotal.toLocaleString('vi-VN');
+         },
+         get checkoutUrl() {
+             if (this.selectedIds.length === 0) return null;
+             const base = '{{ route('shop.checkout.index') }}';
+             const params = this.selectedIds.map(id => 'items[]=' + id).join('&');
+             return base + '?' + params;
+         },
+     }">
 
     {{-- Items list --}}
     <div class="lg:col-span-2 space-y-4">
         @foreach($cartItems as $item)
         <div class="bg-white rounded-lg shadow p-4 flex gap-4 {{ $item->product->stock === 0 ? 'opacity-60' : '' }}">
+
+            {{-- Checkbox --}}
+            <div class="flex items-center flex-shrink-0">
+                <input type="checkbox"
+                    :checked="selectedIds.includes({{ $item->id }})"
+                    @change="$event.target.checked ? selectedIds.push({{ $item->id }}) : selectedIds = selectedIds.filter(i => i !== {{ $item->id }})"
+                    {{ $item->product->stock === 0 ? 'disabled' : '' }}
+                    class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 {{ $item->product->stock === 0 ? 'cursor-not-allowed' : 'cursor-pointer' }}">
+            </div>
+
             <img src="{{ $item->product->image_url }}" alt="{{ $item->product->name }}"
                 class="w-20 h-20 object-cover rounded-lg flex-shrink-0">
             <div class="flex-1">
@@ -58,7 +90,7 @@
                     </form>
                 </div>
             </div>
-            <div class="text-right font-semibold text-gray-800">
+            <div class="text-right font-semibold text-gray-800 flex-shrink-0">
                 {{ number_format($item->subtotal) }}đ
             </div>
         </div>
@@ -70,20 +102,24 @@
         <h2 class="font-semibold text-lg mb-4">Tóm tắt đơn hàng</h2>
         <div class="flex justify-between text-sm mb-2">
             <span>Tạm tính</span>
-            <span>{{ number_format($total) }}đ</span>
-        </div>
-        <div class="flex justify-between text-sm mb-4">
-            <span>Phí vận chuyển</span>
-            <span class="text-green-600">Miễn phí</span>
+            <span x-text="subtotalFmt + 'đ'">0đ</span>
         </div>
         <div class="border-t pt-3 flex justify-between font-bold text-base">
             <span>Tổng cộng</span>
-            <span class="text-indigo-600">{{ number_format($total) }}đ</span>
+            <span class="text-indigo-600" x-text="subtotalFmt + 'đ'">0đ</span>
         </div>
-        <a href="{{ route('shop.checkout.index') }}"
-            class="block mt-4 bg-indigo-600 text-white text-center py-3 rounded-lg hover:bg-indigo-700 transition font-medium">
+        <button
+            @click="if (checkoutUrl) window.location.href = checkoutUrl"
+            :disabled="selectedIds.length === 0"
+            :class="selectedIds.length === 0
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer'"
+            class="block w-full mt-4 text-center py-3 rounded-lg transition font-medium">
             Tiến hành thanh toán
-        </a>
+        </button>
+        <p x-show="selectedIds.length === 0" class="text-xs text-gray-400 text-center mt-1">
+            Chọn sản phẩm để thanh toán
+        </p>
         <a href="{{ route('shop.products.index') }}" class="block mt-2 text-center text-sm text-gray-500 hover:underline">
             ← Tiếp tục mua sắm
         </a>

@@ -73,6 +73,13 @@ class CartService
         CartItem::where('user_id', $user->id)->delete();
     }
 
+    public function removeMultiple(User $user, array $cartItemIds): void
+    {
+        CartItem::where('user_id', $user->id)
+            ->whereIn('id', $cartItemIds)
+            ->delete();
+    }
+
     public function getTotal(User $user): float
     {
         return $this->getItems($user)->sum('subtotal');
