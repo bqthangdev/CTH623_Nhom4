@@ -29,7 +29,7 @@
         {{-- Mật khẩu --}}
         <div class="mt-4">
             <x-input-label for="password" value="Mật khẩu" />
-            <x-text-input id="password" class="block mt-1 w-full" type="password"
+            <x-password-input id="password" class="block mt-1 w-full"
                 name="password" required autocomplete="new-password" />
             <x-input-error :messages="$errors->get('password')" class="mt-2" />
         </div>
@@ -37,7 +37,7 @@
         {{-- Xác nhận mật khẩu --}}
         <div class="mt-4">
             <x-input-label for="password_confirmation" value="Xác nhận mật khẩu" />
-            <x-text-input id="password_confirmation" class="block mt-1 w-full" type="password"
+            <x-password-input id="password_confirmation" class="block mt-1 w-full"
                 name="password_confirmation" required autocomplete="new-password" />
             <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
         </div>
