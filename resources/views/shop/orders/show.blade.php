@@ -70,9 +70,11 @@
                         @csrf
                         <input type="hidden" name="order_id" value="{{ $order->id }}">
                         <input type="hidden" name="rating" :value="rating">
-                        <p class="text-xs font-medium text-gray-600 mb-2">Đánh giá sản phẩm này
+                        <p class="text-xs font-medium text-gray-600 mb-2">
                             @if($reviewDeadline)
-                            <span class="text-gray-400 font-normal ml-1">(còn {{ now()->diffInDays($reviewDeadline) }} ngày)</span>
+                                Vui lòng đánh giá sản phẩm trước ngày <span class="text-indigo-600">{{ $reviewDeadline->format('d/m/Y') }}</span>
+                            @else
+                                Đánh giá sản phẩm này
                             @endif
                         </p>
                         <div class="flex items-center gap-2 mb-2">
