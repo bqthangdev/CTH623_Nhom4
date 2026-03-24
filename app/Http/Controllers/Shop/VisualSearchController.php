@@ -20,10 +20,13 @@ class VisualSearchController extends Controller
 
     public function search(StoreVisualSearchRequest $request): View
     {
-        $searchResult   = $this->visualSearchService->search($request->file('image'));
+        $imageFile          = $request->file('image');
+        $searchImageDataUri = 'data:' . $imageFile->getMimeType() . ';base64,' . base64_encode($imageFile->getContent());
+
+        $searchResult   = $this->visualSearchService->search($imageFile);
         $results        = $searchResult->products;
         $detectedObject = $searchResult->detectedObject;
 
-        return view('shop.visual-search', compact('results', 'detectedObject'));
+        return view('shop.visual-search', compact('results', 'detectedObject', 'searchImageDataUri'));
     }
 }

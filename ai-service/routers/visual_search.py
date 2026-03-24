@@ -71,15 +71,16 @@ _text_labels: list[str] = []
 # CLIP was trained on English captions, so descriptive prompts yield better
 # zero-shot accuracy than raw Vietnamese names.
 _CATEGORY_PROMPTS: dict[str, str] = {
-    "Thời trang":  "a photo of fashion clothing or a garment",
+    "Thời trang":  "a photo of fashion clothing or a garment, such as a shirt, dress, jacket or sock",
     "Điện tử":     "a photo of an electronic device or gadget",
-    "Gia dụng":    "a photo of a household appliance",
+    "Gia dụng":    "a photo of a household appliance such as a doormat, fan, table lamp, rice cooker, or thermos flask",
     "Sách":        "a photo of a book",
     "Thể thao":    "a photo of sports equipment or activewear",
     "Làm đẹp":     "a photo of a beauty or cosmetics product",
     "Điện thoại":  "a photo of a smartphone or mobile phone",
     "Laptop":      "a photo of a laptop computer",
     "Tai nghe":    "a photo of headphones or earphones",
+    "Loa":         "a photo of a speaker or audio device",
 }
 
 

@@ -64,14 +64,19 @@ class VisualSearchService
             throw new \RuntimeException('AI service returned error: ' . $response->status());
         }
 
-        $ids = collect($response->json('products', []))->pluck('id')->filter()->all();
+        $productData = collect($response->json('products', []));
+        $ids         = $productData->pluck('id')->filter()->all();
+        $scoreMap    = $productData->keyBy('id')->map(fn ($item) => $item['similarity_score'] ?? null);
 
         if (empty($ids)) {
             throw new \RuntimeException('AI service returned no matching products.');
         }
 
+        $products = $this->productRepository->getByIds($ids);
+        $products->each(fn ($p) => $p->similarity_score = $scoreMap->get($p->id));
+
         return (object) [
-            'products'        => $this->productRepository->getByIds($ids),
+            'products'        => $products,
             'detectedObject'  => $response->json('detected_object'),
             'embeddingMethod' => $response->json('embedding_method'),
         ];

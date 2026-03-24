@@ -66,7 +66,9 @@ class RecommendationService
             throw new \RuntimeException('AI service returned error: ' . $response->status());
         }
 
-        $ids = collect($response->json('recommended_products', []))->pluck('id')->filter()->all();
+        $items    = collect($response->json('recommended_products', []));
+        $ids      = $items->pluck('id')->filter()->all();
+        $scoreMap = $items->keyBy('id')->map(fn ($item) => $item['score'] ?? null);
 
         if (empty($ids)) {
             throw new \RuntimeException('AI service returned empty list.');
@@ -84,6 +86,7 @@ class RecommendationService
 
         return $this->productRepository->getByIds($ids)
             ->sortBy(fn (Product $product) => $idOrder[$product->id] ?? PHP_INT_MAX)
+            ->each(fn (Product $p) => $p->similarity_score = $scoreMap->get($p->id))
             ->values();
     }
 }
