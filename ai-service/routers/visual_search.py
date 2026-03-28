@@ -9,9 +9,6 @@ Uses OpenAI CLIP (ViT-B/32) for semantic image understanding:
   - Zero-shot classification with CLIP's text encoder identifies the object
     category in the uploaded image and returns it as `detected_object`.
 
-Falls back to the 576-dim spatial color histogram when open-clip-torch / torch
-is not installed (graceful degradation, no code change required).
-
 Endpoints:
   POST /api/visual-search          — search by image
   POST /api/embeddings/compute     — compute embedding + detected_object (no DB write)
@@ -20,7 +17,7 @@ Endpoints:
 
 Environment variables:
   VISUAL_SEARCH_THRESHOLD  — minimum cosine similarity to include a result
-                             (default: 0.60 with CLIP, 0.55 with histogram fallback)
+                             (default: 0.60)
   CLIP_MODEL               — open_clip model name (default: ViT-B-32)
 """
 
@@ -96,7 +93,7 @@ def load_clip_model() -> None:
     """
     global _clip_model, _clip_preprocess, _clip_tokenizer, _clip_embedding_dim
     if not _CLIP_AVAILABLE:
-        print("[visual_search] open-clip-torch not installed — using color histogram fallback.")
+        print("[visual_search] open-clip-torch not installed — visual search is unavailable.")
         return
     try:
         _clip_model, _, _clip_preprocess = open_clip.create_model_and_transforms(
@@ -179,14 +176,13 @@ def load_embeddings() -> None:
 # --------------------------------------------------------------------------- #
 
 def _extract_embedding(image_bytes: bytes) -> np.ndarray:
-    """Return a normalized image embedding vector.
+    """Return a normalized CLIP image embedding vector.
 
-    Dispatches to CLIP (512-dim semantic) when available, otherwise falls
-    back to the 576-dim spatial color histogram.
+    Raises RuntimeError when the CLIP model is not loaded.
     """
-    if _clip_model is not None and _clip_preprocess is not None:
-        return _extract_clip_embedding(image_bytes)
-    return _extract_histogram_embedding(image_bytes)
+    if _clip_model is None or _clip_preprocess is None:
+        raise RuntimeError("CLIP model is not loaded.")
+    return _extract_clip_embedding(image_bytes)
 
 
 def _extract_clip_embedding(image_bytes: bytes) -> np.ndarray:
@@ -202,37 +198,6 @@ def _extract_clip_embedding(image_bytes: bytes) -> np.ndarray:
         features = _clip_model.encode_image(tensor)           # (1, 512)
         features = features / features.norm(dim=-1, keepdim=True)
     return features[0].cpu().numpy().astype(np.float32)
-
-
-def _extract_histogram_embedding(image_bytes: bytes) -> np.ndarray:
-    """Return a normalized 576-dim spatial color histogram vector (fallback).
-
-    Feature layout:
-      [0:192]   Global RGB histogram  — 3 channels × 64 bins
-      [192:576] Spatial 2×2 grid      — 4 quadrants × 3 channels × 32 bins
-    """
-    img = Image.open(io.BytesIO(image_bytes)).convert("RGB").resize((224, 224))
-    arr = np.array(img)
-    h, w = arr.shape[:2]
-
-    features: list[np.ndarray] = []
-
-    # Global histogram: 3 channels × 64 bins = 192 dims
-    for ch in range(3):
-        hist = np.histogram(arr[:, :, ch], bins=64, range=(0, 256))[0]
-        features.append(hist.astype(np.float32))
-
-    # Spatial 2×2 grid: 4 quadrants × 3 channels × 32 bins = 384 dims
-    for row_sl in (slice(0, h // 2), slice(h // 2, h)):
-        for col_sl in (slice(0, w // 2), slice(w // 2, w)):
-            patch = arr[row_sl, col_sl]
-            for ch in range(3):
-                hist = np.histogram(patch[:, :, ch], bins=32, range=(0, 256))[0]
-                features.append(hist.astype(np.float32))
-
-    vec = np.concatenate(features)  # 576 dims total
-    norm = np.linalg.norm(vec)
-    return vec / norm if norm > 0 else vec
 
 
 def _detect_object(image_vec: np.ndarray) -> Optional[str]:
@@ -265,7 +230,7 @@ def _active_embedding_method() -> str:
     """Return a human-readable label for the embedding method currently in use."""
     if _clip_model is not None:
         return f"CLIP {CLIP_MODEL_NAME} ({_clip_embedding_dim}-dim)"
-    return "color histogram fallback (576-dim)"
+    return "unavailable"
 
 
 def _db_connect() -> pymysql.Connection:
@@ -326,7 +291,10 @@ async def visual_search(image: UploadFile = File(...)):
         return {"products": [], "detected_object": None}
 
     contents = await image.read()
-    query_vec = _extract_embedding(contents)
+    try:
+        query_vec = _extract_embedding(contents)
+    except RuntimeError:
+        return {"products": [], "detected_object": None, "embedding_method": "unavailable"}
     expected_dim = query_vec.shape[0]
 
     # Skip cached embeddings with a different dimension (stale after re-generate)
