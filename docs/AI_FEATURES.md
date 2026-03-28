@@ -101,7 +101,6 @@ Người dùng upload ảnh
         { "id": 12, "similarity_score": 0.9643 },
         { "id": 3,  "similarity_score": 0.9105 }
     ],
-    "detected_object": "Điện thoại",
     "embedding_method": "CLIP ViT-B-32 (512-dim)"
 }
 ```
@@ -131,30 +130,6 @@ Lưu vector embedding đã tính sẵn vào DB và cập nhật cache in-memory.
 Độ tương đồng giữa ảnh truy vấn và từng sản phẩm được tính bằng **cosine similarity**
 trên ma trận embedding đã load vào bộ nhớ lúc khởi động. Chỉ sản phẩm có score
 ≥ `SIMILARITY_THRESHOLD` (mặc định **0.60** với CLIP) mới được đưa vào kết quả.
-
-### Nhận diện đồ vật (Zero-Shot Classification)
-
-Song song với tìm kiếm, service phân loại ảnh upload để trả về tên danh mục
-sản phẩm được nhận diện (`detected_object`) — hiển thị ngay trước kết quả tìm kiếm.
-
-**Luồng:**
-1. Khi khởi động, service đọc tất cả tên danh mục từ DB và encode chúng
-   thành vector 512-dim bằng CLIP **text encoder** (dùng prompt tiếng Anh mô tả
-   danh mục để đảm bảo CLIP hiểu đúng ngữ nghĩa).
-2. Khi search, tính **dot-product similarity** giữa embedding ảnh và tất cả
-   vector văn bản → **softmax** → tắt cả xác suất → danh mục tạt cao nhất.
-3. Nếu xác suất cao nhất vượt ngưỡng (tối thiểu 15%) thì trả về tên danh mục,
-   ngược lại trả về `null`.
-
-#### Điều chỉnh ngưỡng tương đồng
-
-Thêm vào file `.env` của AI Service:
-
-```env
-VISUAL_SEARCH_THRESHOLD=0.60   # Giảm xuống (0.50) để kết quả rộng hơn,
-                                # Tăng lên (0.75) để kết quả khắt khe hơn
-CLIP_MODEL=ViT-B-32             # Hoặc ViT-L-14 để chính xác hơn (chậm hơn)
-```
 
 ### Sinh embeddings cho sản phẩm
 

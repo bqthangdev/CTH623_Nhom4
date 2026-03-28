@@ -25,8 +25,7 @@ class VisualSearchController extends Controller
 
         $searchResult   = $this->visualSearchService->search($imageFile);
         $results        = $searchResult->products;
-        $detectedObject = $searchResult->detectedObject;
 
-        return view('shop.visual-search', compact('results', 'detectedObject', 'searchImageDataUri'));
+        return view('shop.visual-search', compact('results', 'searchImageDataUri'));
     }
 }

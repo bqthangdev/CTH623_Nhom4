@@ -20,9 +20,8 @@ class VisualSearchController extends Controller
         $searchResult = $this->visualSearchService->search($request->file('image'));
 
         return response()->json([
-            'success'         => true,
-            'data'            => $searchResult->products,
-            'detected_object' => $searchResult->detectedObject,
+            'success' => true,
+            'data'    => $searchResult->products,
         ]);
     }
 }

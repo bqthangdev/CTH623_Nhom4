@@ -15,8 +15,6 @@ async def lifespan(app: FastAPI):
     # Load CLIP model first — required before computing or comparing embeddings.
     # On first run this downloads the model weights (~350 MB for ViT-B/32).
     visual_search.load_clip_model()
-    # Pre-compute CLIP text embeddings for zero-shot object classification.
-    visual_search.load_category_labels()
     # Load stored product embeddings from the database into memory.
     visual_search.load_embeddings()
     yield

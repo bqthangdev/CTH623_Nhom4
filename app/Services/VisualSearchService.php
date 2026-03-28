@@ -33,7 +33,6 @@ class VisualSearchService
 
             Log::info('[VisualSearch] Search completed.', [
                 'embedding_method' => $result->embeddingMethod,
-                'detected_object'  => $result->detectedObject,
                 'result_count'     => $result->products->count(),
             ]);
 
@@ -44,8 +43,7 @@ class VisualSearchService
             ]);
 
             return (object) [
-                'products'       => $this->productRepository->getFeatured(10),
-                'detectedObject' => null,
+                'products' => $this->productRepository->getFeatured(10),
             ];
         }
     }
@@ -80,7 +78,6 @@ class VisualSearchService
 
         return (object) [
             'products'        => $products,
-            'detectedObject'  => $response->json('detected_object'),
             'embeddingMethod' => $response->json('embedding_method'),
         ];
     }
