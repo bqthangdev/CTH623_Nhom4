@@ -30,10 +30,8 @@ AI Service – FastAPI (port 8001)
    ├── POST /api/visual-search
    ├── POST /api/embeddings/compute
    ├── POST /api/embeddings/store
-   ├── POST /api/embeddings/generate
    ├── GET  /api/recommendations/similar
-   ├── GET  /api/recommendations/personal
-   └── GET  /api/recommendations/collaborative
+   └── GET  /api/recommendations/personal
 ```
 
 ### Các file liên quan
@@ -110,7 +108,7 @@ Người dùng upload ảnh
 
 Danh sách trả về tối đa **10 sản phẩm**, sắp xếp theo `similarity_score` giảm dần,
 và **chỉ bao gồm sản phẩm đạt ngưỡng tương đồng tối thiểu** (`VISUAL_SEARCH_THRESHOLD`,
-mặc định **0.60** với CLIP, **0.55** với histogram fallback). Nếu không có sản phẩm nào vượt ngưỡng — hoặc chưa có embedding trong DB
+mặc định **0.60**). Nếu không có sản phẩm nào vượt ngưỡng — hoặc chưa có embedding trong DB
 — endpoint trả về danh sách rỗng và Laravel fallback về sản phẩm nổi bật.
 
 **`POST /api/embeddings/compute`** — nhận `multipart/form-data` với field `image`.
@@ -120,24 +118,15 @@ Sử dụng kết hợp với `/store` để tập hợp embedding từ nhiều 
 **`POST /api/embeddings/store`** — nhận JSON `{product_id, embedding: [...]}`.  
 Lưu vector embedding đã tính sẵn vào DB và cập nhật cache in-memory.
 
-**`POST /api/embeddings/generate?product_id={id}`** — nhận `multipart/form-data` với
-field `image`. Tính embedding cho một ảnh và lưu trực tiếp (legacy). Vẫn hoạt động
-nhưng khướng nghị dùng luồng compute → average → store cho sản phẩm nhiều ảnh.
 
-### Thuật toán embedding
-
-Vector đặc trưng là **CLIP image embedding chuẩn hoá L2** (512 chiều):
 
 | Thành phần | Model | Chiều |
 |---|---|---|
 | CLIP ViT-B/32 image encoder | `openai/ViT-B-32` | 512 |
-| Fallback: spatial color histogram | (không có GPU/torch) | 576 |
 
-- Ảnh được encode qua **CLIP ViT-B/32** — mô hình vision-language pre-trained trên
-  400 triệu cặp ảnh-văn bản từ internet. Embedding nắm bắt nội dung ngữ nghĩa
-  (hình dạng, loại đồ vật, ngữ cảnh) thay vì chỉ màu sắc pixel.
-- Nếu `open-clip-torch` / `torch` chưa được cài, service tự động fallback về
-  576-dim spatial color histogram (không cần thay đổi code).
+Ảnh được encode qua **CLIP ViT-B/32** — mô hình vision-language pre-trained trên
+400 triệu cặp ảnh-văn bản từ internet. Embedding nắm bắt nội dung ngữ nghĩa
+(hình dạng, loại đồ vật, ngữ cảnh) thay vì chỉ màu sắc pixel.
 
 Độ tương đồng giữa ảnh truy vấn và từng sản phẩm được tính bằng **cosine similarity**
 trên ma trận embedding đã load vào bộ nhớ lúc khởi động. Chỉ sản phẩm có score
@@ -260,7 +249,6 @@ Người dùng đã đăng nhập truy cập trang chủ
 | Method | URI | Mục đích |
 |---|---|---|
 | `GET` | `/api/products/{product}/recommendations` | Endpoint JSON — sản phẩm tương tự |
-| `GET` | `/api/recommendations/collaborative?user_id=Y` | Pure item-item CF (không yêu cầu Sanctum) |
 
 ### AI Service endpoints
 
@@ -272,13 +260,6 @@ Người dùng đã đăng nhập truy cập trang chủ
 | `limit` | `int` | Không (mặc định 8) | Số lượng kết quả |
 
 **`GET /api/recommendations/personal`** — query params:
-
-| Param | Kiểu | Bắt buộc | Mô tả |
-|---|---|---|---|
-| `user_id` | `int` | Có | ID người dùng |
-| `limit` | `int` | Không (mặc định 8) | Số lượng kết quả |
-
-**`GET /api/recommendations/collaborative`** — query params:
 
 | Param | Kiểu | Bắt buộc | Mô tả |
 |---|---|---|---|
@@ -306,34 +287,12 @@ Người dùng đã đăng nhập truy cập trang chủ
 4. Trả về top-`limit` sau khi đa dạng hóa.
 
 **Personalized:**
-1. Truy vấn `order_items JOIN orders` để lấy lịch sử mua kèm ngày đặt hàng.
-2. Xây dựng **recency-weighted taste profile**: mỗi embedding sản phẩm đã mua được nhân
-   với trọng số `exp(-days_old / 30)` — sản phẩm mua gần đây đóng góp nhiều hơn.
-3. Chuẩn hoá L2 vector trung bình có trọng số.
+1. Truy vấn `order_items JOIN orders` để lấy danh sách ID sản phẩm đã mua.
+2. Tính **trung bình cộng** các embedding CLIP của những sản phẩm đó → **taste vector**.
+3. Chuẩn hoá L2 taste vector.
 4. Tính cosine similarity với tất cả sản phẩm chưa mua.
-5. Tính **item-item CF score**: với mỗi sản phẩm ứng viên, tổng hợp tần suất xuất hiện
-   cùng đơn hàng với các sản phẩm người dùng đã mua (co-purchase matrix toàn site).
-6. **Unified blending** ba tín hiệu với trọng số thay đổi theo lịch sử mua:
-
-| Số SP đã mua | clip_w | cf_w | pop_w |
-|---|---|---|---|
-| 1 | 0.68 | 0.12 | 0.20 |
-| 2 | 0.67 | 0.23 | 0.10 |
-| ≥ 3 | 0.65 | 0.35 | 0.00 |
-
-Threshold vẫn áp dụng trên **cosine similarity thuần** (độc lập với blend)
-để đảm bảo ngưỡng chất lượng ngữ nghĩa tối thiểu.
-
-**Collaborative Filtering thuần (`/recommendations/collaborative`):**
-1. Xây dựng ma trận co-purchase: đếm số đơn hàng có cả sản phẩm A và B trên toàn site.
-2. Với lịch sử mua của người dùng, tổng hợp điểm co-purchase cho từng ứng viên.
-3. Chuẩn hoá và đa dạng hoá kết quả theo danh mục.
-4. Fallback về phổ biến toàn site khi chưa có dữ liệu co-purchase.
-
-**Xử lý sparse history (cold-start):** Khi người dùng có ít hơn 3 sản phẩm đã mua
-có embedding, taste profile không đủ đáng tin cậy. Hệ thống tự động điều chỉnh trọng số
-(xem bảng trên): theo tỉ lệ `ratio = min(1, history_size / 3)`, điểm
-CF tăng dần trong khi điểm popularity giảm dần.
+5. Lọc theo `RECOMMENDATION_THRESHOLD`, sắp xếp giảm dần, áp dụng category diversity.
+6. Trả về top-`limit`.
 
 **Lưu ý:** Laravel giữ nguyên thứ tự mà AI trả về khi map sang Eloquent Collection:
 
@@ -403,7 +362,6 @@ Các biến tùy chỉnh AI Service (thêm vào `.env` của AI Service):
 |---|---|---|
 | `VISUAL_SEARCH_THRESHOLD` | `0.60` | Ngưỡng cosine similarity cho Visual Search |
 | `RECOMMENDATION_THRESHOLD` | `0.40` | Ngưỡng cosine similarity cho Recommendations |
-| `CF_BLEND_WEIGHT` | `0.35` | Trọng số tối đa của tín hiệu CF trong personal blend |
 | `CLIP_MODEL` | `ViT-B-32` | Tên model CLIP (`ViT-B-32` hoặc `ViT-L-14`) |
 
 ---
@@ -428,16 +386,12 @@ CLIP ViT-B/32 hoạt động tốt với hầu hết loại sản phẩm. Để 
 
 - **Đã triển khai:**
   - Score threshold (`RECOMMENDATION_THRESHOLD`) — loại bỏ sản phẩm không đủ tương đồng.
-  - Recency-weighted taste profile — mua gần đây ảnh hưởng nhiều hơn.
+  - Plain average taste profile — trung bình cộng embedding của toàn bộ lịch sử mua.
   - Category diversity — tối đa 2 sản phẩm/danh mục.
-  - **Popularity blending** — giảm cold-start khi người dùng có ít lịch sử mua.
-  - **Item-item Collaborative Filtering** — tín hiệu hành vi (co-purchase) được pha trộn
-    với CLIP similarity; trọng số CF tăng dần theo lịch sử mua (đến tối đa `CF_BLEND_WEIGHT`).
-  - **Endpoint CF thuần** (`/recommendations/collaborative`) — kết quả dựa hoàn toàn
-    vào tần suất cùng đơn hàng, không cần CLIP embeddings.
   - **CLIP ViT-L/14** hỗ trợ qua biến môi trường `CLIP_MODEL=ViT-L-14`; dimension
     được phát hiện tự động khi khởi động, không cần sửa code.
 - **Cải tiến tiếp theo:**
-  - **Collaborative filtering nâng cao:** dùng matrix factorization (SVD, ALS) trên
-    toàn bộ `order_items` để nắm bắt pattern ẩn ở quy mô lớn — phù hợp khi catalog
-    và số người dùng đã tăng trưởng đủ lớn (> 1.000 user, > 100 sản phẩm).
+  - **Recency weighting:** nhân trọng số `exp(-days_old / T)` cho embedding sản phẩm
+    mua gần đây — tập trung vào sở thích hiện tại thay vì lịch sử dài hạn.
+  - **Collaborative filtering:** pha trộn CLIP similarity với tín hiệu co-purchase
+    (matrix factorization SVD/ALS) để nắm bắt pattern hành vi tập thể.

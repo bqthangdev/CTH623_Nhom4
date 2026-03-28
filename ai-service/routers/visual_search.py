@@ -13,7 +13,6 @@ Endpoints:
   POST /api/visual-search          — search by image
   POST /api/embeddings/compute     — compute embedding + detected_object (no DB write)
   POST /api/embeddings/store       — store a pre-computed embedding vector
-  POST /api/embeddings/generate    — legacy: compute + store in one call
 
 Environment variables:
   VISUAL_SEARCH_THRESHOLD  — minimum cosine similarity to include a result
@@ -37,7 +36,7 @@ from PIL import Image
 from pydantic import BaseModel
 from sklearn.metrics.pairwise import cosine_similarity
 
-# CLIP is optional — if not installed the service falls back to color histograms.
+# CLIP must be installed for visual search to work.
 try:
     import open_clip
     import torch
@@ -176,22 +175,12 @@ def load_embeddings() -> None:
 # --------------------------------------------------------------------------- #
 
 def _extract_embedding(image_bytes: bytes) -> np.ndarray:
-    """Return a normalized CLIP image embedding vector.
+    """Encode the image with CLIP and return the L2-normalised embedding vector.
 
     Raises RuntimeError when the CLIP model is not loaded.
     """
     if _clip_model is None or _clip_preprocess is None:
         raise RuntimeError("CLIP model is not loaded.")
-    return _extract_clip_embedding(image_bytes)
-
-
-def _extract_clip_embedding(image_bytes: bytes) -> np.ndarray:
-    """Encode the image with CLIP and return the L2-normalized 512-dim vector.
-
-    CLIP image embeddings encode semantic content (shape, object type, context)
-    rather than low-level pixel statistics, making them far more discriminative
-    across product categories than color histograms.
-    """
     img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     tensor = _clip_preprocess(img).unsqueeze(0)   # (1, 3, 224, 224)
     with torch.no_grad():
@@ -279,8 +268,7 @@ class GenerateResult(BaseModel):
 async def visual_search(image: UploadFile = File(...)):
     """Return products visually similar to the uploaded image.
 
-    Uses CLIP semantic embeddings (512-dim) when available, falling back to
-    spatial color histograms (576-dim).
+    Uses CLIP semantic embeddings (512-dim).
 
     Response fields:
       detected_object — recognized product category name (null if unavailable)
@@ -360,29 +348,5 @@ async def store_embedding(payload: StoreEmbeddingRequest):
     return {"success": True, "product_id": payload.product_id}
 
 
-@router.post("/embeddings/generate", response_model=GenerateResult)
-async def generate_embedding(product_id: int, image: UploadFile = File(...)):
-    """Compute and persist a CLIP embedding for one image (legacy single-image endpoint).
 
-    product_id is passed as a query parameter.
-    Prefer the compute → average → store flow used by `php artisan embeddings:generate`.
-    """
-    contents = await image.read()
-    embedding = _extract_embedding(contents).tolist()
-
-    conn = _db_connect()
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            INSERT INTO product_embeddings (product_id, embedding, created_at, updated_at)
-            VALUES (%s, %s, NOW(), NOW())
-            ON DUPLICATE KEY UPDATE embedding = VALUES(embedding), updated_at = NOW()
-            """,
-            (product_id, json.dumps(embedding)),
-        )
-    conn.commit()
-    conn.close()
-
-    _embeddings[product_id] = np.array(embedding, dtype=np.float32)
-    return {"success": True, "product_id": product_id}
 

@@ -208,10 +208,8 @@ php artisan embeddings:generate
 | POST | `/api/visual-search` | Tìm kiếm hình ảnh (CLIP ViT-B/32) |
 | POST | `/api/embeddings/compute` | Tính embedding cho ảnh |
 | POST | `/api/embeddings/store` | Lưu embedding vào DB |
-| POST | `/api/embeddings/generate` | Tính và lưu embedding (legacy) |
 | GET | `/api/recommendations/similar` | Sản phẩm tương tự |
-| GET | `/api/recommendations/personal` | Gợi ý cá nhân hóa (CLIP + CF + popularity) |
-| GET | `/api/recommendations/collaborative` | Item-item Collaborative Filtering thuần |
+| GET | `/api/recommendations/personal` | Gợi ý cá nhân hóa theo lịch sử mua |
 | GET | `/health` | Health check |
 
 ---
