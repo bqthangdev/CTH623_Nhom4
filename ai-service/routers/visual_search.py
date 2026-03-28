@@ -71,16 +71,16 @@ _text_labels: list[str] = []
 # CLIP was trained on English captions, so descriptive prompts yield better
 # zero-shot accuracy than raw Vietnamese names.
 _CATEGORY_PROMPTS: dict[str, str] = {
-    "Thời trang":  "a photo of fashion clothing or a garment, such as a shirt, dress, jacket or sock",
-    "Điện tử":     "a photo of an electronic device or gadget",
-    "Gia dụng":    "a photo of a household appliance such as a doormat, fan, table lamp, rice cooker, or thermos flask",
-    "Sách":        "a photo of a book",
-    "Thể thao":    "a photo of sports equipment or activewear",
-    "Làm đẹp":     "a photo of a beauty or cosmetics product",
-    "Điện thoại":  "a photo of a smartphone or mobile phone",
-    "Laptop":      "a photo of a laptop computer",
-    "Tai nghe":    "a photo of headphones or earphones",
-    "Loa":         "a photo of a speaker or audio device",
+    "Thời trang":  "a photo of fashion clothing or a garment, such as a shirt, dress, jacket, sock, pants, skirt, coat, swimwear, hat, scarf, gloves or belt on a hanger or folded",
+    "Điện tử":     "a photo of a general electronic device such as a remote control, calculator, digital camera, smartwatch, USB drive, power bank or charging cable",
+    "Gia dụng":    "a photo of a household appliance such as a doormat, fan, table lamp, rice cooker, thermos flask, blender, vacuum cleaner, air purifier, kettle, iron or storage box",
+    "Sách":        "a photo of a book, paperback, hardcover book, textbook, novel or open book with text pages",
+    "Thể thao":    "a photo of sports equipment or activewear such as a dumbbell, yoga mat, bicycle, football, basketball, running shoes, gym bag or sports jersey",
+    "Làm đẹp":     "a photo of a beauty or cosmetics product such as lipstick, face cream, shampoo, perfume bottle, nail polish, skincare serum or makeup palette",
+    "Điện thoại":  "a photo of a smartphone or mobile phone held in hand or on a surface, brands include iPhone, Samsung Galaxy, Google Pixel, Xiaomi, OPPO or Vivo",
+    "Laptop":      "a photo of a laptop computer open showing keyboard and screen, or closed showing the lid, brands include MacBook, Dell, HP, Lenovo ThinkPad or Asus",
+    "Tai nghe":    "a photo of headphones or earphones, over-ear headphones, in-ear earbuds, wired or wireless, brands include AirPods, Sony, JBL, Bose or Sennheiser",
+    "Loa":         "a photo of a speaker or audio device, portable Bluetooth speaker, bookshelf speaker, cylindrical or box-shaped, brands include JBL, Sony, Bose, Marshall or Harman",
 }
 
 

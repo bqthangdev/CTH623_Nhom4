@@ -72,8 +72,11 @@ class VisualSearchService
             throw new \RuntimeException('AI service returned no matching products.');
         }
 
-        $products = $this->productRepository->getByIds($ids);
-        $products->each(fn ($p) => $p->similarity_score = $scoreMap->get($p->id));
+        $idOrder  = array_flip($ids);
+        $products = $this->productRepository->getByIds($ids)
+            ->sortBy(fn ($p) => $idOrder[$p->id] ?? PHP_INT_MAX)
+            ->each(fn ($p) => $p->similarity_score = $scoreMap->get($p->id))
+            ->values();
 
         return (object) [
             'products'        => $products,
